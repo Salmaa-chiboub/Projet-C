@@ -143,13 +143,13 @@ char* signUp() {
 
 
 char* login() {
-    static char username[USERNAME_LENGTH];  
+    static char username[USERNAME_LENGTH];
     User user;
-    FILE *file = fopen(FILEuser, "rb"); 
+    FILE *file = fopen(FILEuser, "rb");
 
     if (file == NULL) {
         printf("Erreur lors de l'ouverture du fichier.\n");
-        return NULL;  
+        return NULL;
     }
 
     printf("Connexion:\n");
@@ -158,12 +158,12 @@ char* login() {
     printf("Entrez votre mot de passe: ");
     scanf("%s", user.password);
 
-    
+
     User tempUser;
     while (fread(&tempUser, sizeof(User), 1, file)) {
         if (strcmp(tempUser.username, user.username) == 0 && strcmp(tempUser.password, user.password) == 0) {
-           
-            strcpy(username, tempUser.username);  
+
+            strcpy(username, tempUser.username);
             printf("Connexion réussie ! Bienvenue, %s %s.\n", tempUser.nom, tempUser.prenom);
             fclose(file);  // Fermer le fichier
             return username;  // Connexion réussie, retourner le username
@@ -176,14 +176,14 @@ char* login() {
 }
 
 
-
-
 // Fonction pour afficher les lignes existantes
 void afficherLignes() {
     int choix;
 
     do {
-        printf("\nChoisissez le type de ligne à afficher :\n");
+        printf("\n===========================\n");
+        printf("  AFFICHAGE DES LIGNES\n");
+        printf("===========================\n");
         printf("1. Lignes internes\n");
         printf("2. Lignes externes\n");
         printf("3. Retour\n");
@@ -194,19 +194,29 @@ void afficherLignes() {
             case 1: {
                 FILE *file = fopen(FILEvoyageInterne, "rb");
                 if (!file) {
-                    printf("Erreur lors de l'ouverture du fichier des lignes internes.\n");
+                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
                 } else {
                     VoyageInterne voyage;
-                    printf("\nLignes internes :\n");
+                    int found = 0;
+                    printf("\n===============================================\n");
+                    printf("           LIGNES INTERNES DISPONIBLES\n");
+                    printf("===============================================\n");
+                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s |\n",
+                           "ID", "Départ", "Arrivée", "Date", "Prix ($)");
+                    printf("-----------------------------------------------------------------------\n");
+
                     while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
-                        printf("ID: %s, Départ: %s, Arrivée: %s, Date: %02d/%02d/%04d, Heure départ: %02d:%02d, Heure arrivée: %02d:%02d, Places: %d, Compagnie: %s, Prix: %d$, Durée: %d h %d min\n",
+                        found = 1;
+                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d |\n",
                                voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
                                voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                               voyage.heure_depart.heure, voyage.heure_depart.minute,
-                               voyage.heure_arrivee.heure, voyage.heure_arrivee.minute,
-                               voyage.nb_place, voyage.compagnie, voyage.prix,
-                               voyage.duree_vol.heure, voyage.duree_vol.minute);
+                               voyage.prix);
                     }
+
+                    if (!found) {
+                        printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
+                    }
+                    printf("===============================================\n");
                     fclose(file);
                 }
                 break;
@@ -214,31 +224,42 @@ void afficherLignes() {
             case 2: {
                 FILE *file = fopen(FILEvoyageExterne, "rb");
                 if (!file) {
-                    printf("Erreur lors de l'ouverture du fichier des lignes externes.\n");
+                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
                 } else {
                     VoyageExterne voyage;
-                    printf("\nLignes externes :\n");
+                    int found = 0;
+                    printf("\n===============================================\n");
+                    printf("           LIGNES EXTERNES DISPONIBLES\n");
+                    printf("===============================================\n");
+                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s |\n",
+                           "ID", "Départ", "Arrivée", "Date", "Prix ($)");
+                    printf("---------------------------------------------------------------------\n");
+
                     while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
-                        printf("ID: %s, Départ: %s (%s), Arrivée: %s (%s), Date: %02d/%02d/%04d, Heure départ: %02d:%02d, Heure arrivée: %02d:%02d, Places: %d, Compagnie: %s, Prix: %d$, Classe: %s, Durée: %d h %d min\n",
-                               voyage.id, voyage.aeroport_depart, voyage.pays_depart, voyage.aeroport_arrive, voyage.pays_arrivee,
+                        found = 1;
+                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d |\n",
+                               voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
                                voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                               voyage.heure_depart.heure, voyage.heure_depart.minute,
-                               voyage.heure_arrivee.heure, voyage.heure_arrivee.minute,
-                               voyage.nb_place, voyage.compagnie, voyage.prix,
-                               voyage.classe, voyage.duree_vol.heure, voyage.duree_vol.minute);
+                               voyage.prix);
                     }
+
+                    if (!found) {
+                        printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
+                    }
+                    printf("===============================================\n");
                     fclose(file);
                 }
                 break;
             }
             case 3:
-                printf("Retour au menu principal.\n");
+                printf("\nRetour au menu principal.\n");
                 break;
             default:
-                printf("Choix invalide.\n");
+                printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
         }
     } while (choix != 3);
 }
+
 
 
 
@@ -256,7 +277,7 @@ void saisirCriteresRecherche(char *depart, char *arrive, Date *date, int *nb_pla
 }
 
 // Display available voyages with the updated structure
-int afficherVoyagesDisponibles(FILE *fichier, const char *depart, const char *arrive, Date date, int nb_places) {
+int afficherVoyagesDisponiblesInternes(FILE *fichier, const char *depart, const char *arrive, Date date, int nb_places) {
     VoyageInterne voyage;
     int index = 1;
     int voyage_trouve = 0;
@@ -273,8 +294,8 @@ int afficherVoyagesDisponibles(FILE *fichier, const char *depart, const char *ar
             voyage_trouve = 1;
             printf("%d. ID: %s | Départ: %s | Arrivée: %s | Date: %02d/%02d/%04d | "
                    "Heure départ: %02d:%02d | Heure arrivée: %02d:%02d | Compagnie: %s | "
-                   "Prix: %d | Places disponibles: %d | Durée du vol: %02d:%02d\n", 
-                   index, voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive, 
+                   "Prix: %d | Places disponibles: %d | Durée du vol: %02d:%02d\n",
+                   index, voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
                    voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
                    voyage.heure_depart.heure, voyage.heure_depart.minute,
                    voyage.heure_arrivee.heure, voyage.heure_arrivee.minute,
@@ -303,8 +324,7 @@ int demanderChoixVoyage(int index_max) {
 
     return choix_voyage;
 }
-
-void confirmerReservation(FILE *fichier, const char *username, int choix_voyage, int nb_places, char *depart, char *arrive, Date date) {
+void confirmerReservationInterne(FILE *fichier, const char *username, int choix_voyage, int nb_places, char *depart, char *arrive, Date date) {
     VoyageInterne voyage;
     Reservation reservation;
     int index = 1;
@@ -322,7 +342,7 @@ void confirmerReservation(FILE *fichier, const char *username, int choix_voyage,
                 voyage.nb_place -= nb_places;
                 fseek(fichier, -sizeof(VoyageInterne), SEEK_CUR);
                 fwrite(&voyage, sizeof(VoyageInterne), 1, fichier);
-                
+
                 // Sauvegarde de la réservation dans le fichier utilisateur
                 FILE *reservation_file;
                 char filename[50];
@@ -349,6 +369,7 @@ void confirmerReservation(FILE *fichier, const char *username, int choix_voyage,
     }
 }
 
+
 void ReserverVoyageInterne(const char *username) {
     char depart[30], arrive[30];
     Date date;
@@ -366,7 +387,7 @@ void ReserverVoyageInterne(const char *username) {
     saisirCriteresRecherche(depart, arrive, &date, &nb_places);
 
     // Affichage des voyages disponibles
-    index = afficherVoyagesDisponibles(fichier, depart, arrive, date, nb_places);
+    index = afficherVoyagesDisponiblesInternes(fichier, depart, arrive, date, nb_places);
     if (index == 0) {
         printf("Aucun voyage disponible ne correspond à vos critères.\n");
     } else {
@@ -378,13 +399,160 @@ void ReserverVoyageInterne(const char *username) {
                 return;
             }
         } while (choix_voyage == -1);
-        
+
         // Confirmation et enregistrement de la réservation
-        confirmerReservation(fichier, username, choix_voyage, nb_places, depart, arrive, date);
+        confirmerReservationInterne(fichier, username, choix_voyage, nb_places, depart, arrive, date);
     }
-    
+
     fclose(fichier);
 }
+
+
+
+
+// Vyage Externes ;
+// saisir des caracteres ;
+void saisirCriteresRechercheExterne(char *pays_depart, char *pays_arrive, char *aeroport_depart, char *aeroport_arrive, Date *date, int *nb_places) {
+    printf("Entrez le pays de départ : ");
+    scanf("%s", pays_depart);
+    printf("Entrez le pays d'arrivée : ");
+    scanf("%s", pays_arrive);
+    printf("Entrez l'aéroport de départ : ");
+    scanf("%s", aeroport_depart);
+    printf("Entrez l'aéroport d'arrivée : ");
+    scanf("%s", aeroport_arrive);
+    printf("Entrez la date de voyage (jour mois année) : ");
+    scanf("%d %d %d", &date->jour, &date->mois, &date->annee);
+    printf("Entrez le nombre de places à réserver : ");
+    scanf("%d", nb_places);
+}
+
+//affichage des lignes disponibles
+
+int afficherVoyagesDisponiblesExterne(FILE *fichier, const char *pays_depart, const char *pays_arrivee,
+                                      const char *aeroport_depart, const char *aeroport_arrive, Date date, int nb_places) {
+    VoyageExterne voyage;
+    int index = 1;
+    int voyage_trouve = 0;
+
+    printf("\nVoyages disponibles :\n");
+    while (fread(&voyage, sizeof(VoyageExterne), 1, fichier)) {
+        if (strcmp(voyage.pays_depart, pays_depart) == 0 &&
+            strcmp(voyage.pays_arrivee, pays_arrivee) == 0 &&
+            strcmp(voyage.aeroport_depart, aeroport_depart) == 0 &&
+            strcmp(voyage.aeroport_arrive, aeroport_arrive) == 0 &&
+            voyage.date_voyage.jour == date.jour &&
+            voyage.date_voyage.mois == date.mois &&
+            voyage.date_voyage.annee == date.annee &&
+            voyage.nb_place >= nb_places) {
+
+            voyage_trouve = 1;
+            printf("%d. ID: %s | Pays départ : %s | Pays arrivée : %s | Départ : %s | Arrivée : %s | "
+                   "Date : %02d/%02d/%04d | Heure départ : %02d:%02d | Heure arrivée : %02d:%02d | "
+                   "Compagnie : %s | Classe : %s | Prix : %d | Places disponibles : %d | Durée du vol : %02d:%02d\n",
+                   index, voyage.id, voyage.pays_depart, voyage.pays_arrivee, voyage.aeroport_depart, voyage.aeroport_arrive,
+                   voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                   voyage.heure_depart.heure, voyage.heure_depart.minute,
+                   voyage.heure_arrivee.heure, voyage.heure_arrivee.minute,
+                   voyage.compagnie, voyage.classe, voyage.prix, voyage.nb_place,
+                   voyage.duree_vol.heure, voyage.duree_vol.minute);
+            index++;
+        }
+    }
+
+    return voyage_trouve ? index - 1 : 0;
+}
+
+// confirmation de reservation
+void confirmerReservationExterne(FILE *fichier, const char *username, int choix_voyage, int nb_places,
+                                  char *pays_depart, char *pays_arrive, char *aeroport_depart, char *aeroport_arrive, Date date) {
+    VoyageExterne voyage;
+    Reservation reservation;
+    int index = 1;
+
+    rewind(fichier);
+    while (fread(&voyage, sizeof(VoyageExterne), 1, fichier)) {
+        if (strcmp(voyage.pays_depart, pays_depart) == 0 &&
+            strcmp(voyage.pays_arrivee, pays_arrive) == 0 &&
+            strcmp(voyage.aeroport_depart, aeroport_depart) == 0 &&
+            strcmp(voyage.aeroport_arrive, aeroport_arrive) == 0 &&
+            voyage.date_voyage.jour == date.jour &&
+            voyage.date_voyage.mois == date.mois &&
+            voyage.date_voyage.annee == date.annee &&
+            voyage.nb_place >= nb_places) {
+
+            if (index == choix_voyage) {
+                voyage.nb_place -= nb_places;
+                fseek(fichier, -sizeof(VoyageExterne), SEEK_CUR);
+                fwrite(&voyage, sizeof(VoyageExterne), 1, fichier);
+
+                // Sauvegarde de la réservation dans le fichier utilisateur
+                FILE *reservation_file;
+                char filename[50];
+                snprintf(filename, sizeof(filename), "reservation_%s.bin", username);
+                reservation_file = fopen(filename, "ab");
+                if (reservation_file == NULL) {
+                    perror("Erreur lors de la création du fichier de réservation.");
+                    fclose(fichier);
+                    return;
+                }
+
+                // Initialiser la réservation
+                strcpy(reservation.username, username);
+                strcpy(reservation.voyage_id, voyage.id);
+                reservation.nb_places_reservees = nb_places;
+                fwrite(&reservation, sizeof(Reservation), 1, reservation_file);
+                fclose(reservation_file);
+
+                printf("Réservation confirmée pour %d place(s) pour le voyage %s.\n", nb_places, voyage.id);
+                break;
+            }
+            index++;
+        }
+    }
+}
+
+
+//reservetion de voyages externe ;
+void ReserverVoyageExterne(const char *username) {
+    char pays_depart[30], pays_arrive[30];
+    char aeroport_depart[30], aeroport_arrive[30];
+    Date date;
+    int nb_places;
+    int index;
+    int choix_voyage;
+
+    FILE *fichier = fopen("voyageExterne.bin", "rb+");
+    if (fichier == NULL) {
+        perror("Erreur lors de l'ouverture du fichier des voyages externes.\n");
+        return;
+    }
+
+    // Saisie des critères de recherche
+    saisirCriteresRechercheExterne(pays_depart, pays_arrive, aeroport_depart, aeroport_arrive, &date, &nb_places);
+
+    // Affichage des voyages disponibles
+    index = afficherVoyagesDisponiblesExterne(fichier, pays_depart, pays_arrive, aeroport_depart, aeroport_arrive, date, nb_places);
+    if (index == 0) {
+        printf("Aucun voyage disponible ne correspond à vos critères.\n");
+    } else {
+        do {
+            choix_voyage = demanderChoixVoyage(index);
+            if (choix_voyage == 0) {
+                printf("Réservation annulée.\n");
+                fclose(fichier);
+                return;
+            }
+        } while (choix_voyage == -1);
+
+        // Confirmation et enregistrement de la réservation
+        confirmerReservationExterne(fichier, username, choix_voyage, nb_places, pays_depart, pays_arrive, aeroport_depart, aeroport_arrive, date);
+    }
+
+    fclose(fichier);
+}
+
+// reservation de voyage;
 
 void ReserverVoyage(char* username){
     int c;
@@ -404,7 +572,7 @@ void ReserverVoyage(char* username){
            // ReserverVoyageExterne(username);
             break;
         case 3:
-            
+
             break;
         default:
             printf("Choix invalide!\n");
@@ -412,11 +580,10 @@ void ReserverVoyage(char* username){
         }
 
     }while (c!=3);
-    
-    
 
-}      
 
+
+}
 
 
 
@@ -438,9 +605,9 @@ void menuPostConnexion(char* username) {
                 break;
             case 2:
               ReserverVoyage(username);
-                break; 
+                break;
             case 3:
-                break; 
+                break;
             default:
                 printf("Choix invalide.\n");
         }
@@ -576,7 +743,7 @@ void ajouterLigneInterne(FILE *file) {
 
     generateUniqueID(voyage.id);  // Generate a unique ID
     printf("ID du voyage: %s\n", voyage.id);
-    
+
 
     printf("Entrez la ville de départ: ");
     scanf("%s", voyage.aeroport_depart);
@@ -688,9 +855,9 @@ void AjouterLigne() {
             }
 
 
-            
 
-                
+
+
             case 2: {
                 FILE *file = fopen(FILEvoyageExterne, "a+");
 
@@ -808,20 +975,20 @@ void supprimerLigne(){
                     supprimerLigneExterne();
                     break;
                 }
-                
+
                case 3:
                     break;
-               
+
                 default:
                      printf("Choix invalide! Veuillez réessayer.\n");
                      break;
                 }
-  
+
 
 
     }while(c!=3);
 }
-//modifier un voyage 
+//modifier un voyage
 void modifierLigneInterne() {
     FILE *file = fopen(FILEvoyageInterne, "rb+");
     if (!file) {
@@ -852,7 +1019,7 @@ void modifierLigneInterne() {
             printf("9. Durée du vol\n");
             printf("0. Quitter la modification\n");
             printf("Entrez votre choix : ");
-            
+
             scanf("%d", &choix);
 
             switch (choix) {
@@ -951,7 +1118,7 @@ void modifierLigneExterne() {
             printf("12. Durée du vol\n");
             printf("0. Quitter la modification\n");
             printf("Entrez votre choix : ");
-            
+
             scanf("%d", &choix);
 
             switch (choix) {
@@ -1049,15 +1216,15 @@ void modifierVoyage(){
                     modifierLigneExterne();
                     break;
                 }
-                
+
                case 3:
                     break;
-               
+
                 default:
                      printf("Choix invalide! Veuillez réessayer.\n");
                      break;
                 }
-  
+
 
 
     }while(c!=3);
@@ -1068,9 +1235,9 @@ void modifierVoyage(){
 
 //Menu d'administrateur
 void MenuAdministrateur(){
-    char c;
+    int c;
     do{
-                
+
                 printf("\nMenu Administrateur:\n");
                 printf("1/ Affichier les lignes\n");
                 printf("2/ Ajout d'une ligne\n");
@@ -1094,7 +1261,7 @@ void MenuAdministrateur(){
                     supprimerLigne();
                      break;
                 }
-                
+
                 case 4:
                      //modifier un voyage;
                      modifierVoyage();
@@ -1108,9 +1275,9 @@ void MenuAdministrateur(){
                      printf("Choix invalide! Veuillez réessayer.\n");
                      break;
          }
-              
-            }while(c != 4);
-                
+
+            }while(c != 5);
+
 }
 
 
@@ -1143,15 +1310,43 @@ int main() {
         printf("              3. Exit\n");
         printf("Veuillez entrer votre choix: ");
         scanf("%d", &choix);
-    } while (choix != 1 && choix != 2 && choix != 3);
+
 
     switch (choix) {
-        case 3:
-            // quitter
-            printf("Au revoir !\n");
-            exit(0);
+        case 1:{
+        // utilisateur
+        printf("Bienvenue utilisateur!\n");
 
-        case 2:
+        do {
+            printf("\nMenu:\n");
+            printf("1. Sign Up\n");
+            printf("2. Log In\n");
+            printf("3. Exit\n");
+            printf("Veuillez entrer votre choix: ");
+            scanf("%d", &choice);
+
+            switch (choice) {
+                case 1:
+                    username = signUp();
+                    // Après l'inscription, on affiche un menu spécifique
+                    menuPostConnexion(username);
+                    break;
+                case 2:
+                    username = login();
+                    menuPostConnexion(username); // Après la connexion réussie
+
+                    break;
+                case 3:
+                    printf("Au revoir !\n");
+                    break;
+                default:
+                    printf("Choix invalide. Veuillez réessayer.\n");
+            }
+            } while (choice != 3);
+            break;
+        }
+
+        case 2:{
             // administrateur
             printf("Bienvenue Administrateur!\n");
             do {
@@ -1169,47 +1364,23 @@ int main() {
                     }
                     break;
                 case 2:
+
                     printf("Au revoir !\n");
                     break;
                 default:
                     printf("Choix invalide. Veuillez réessayer.\n");
             }
-        } while (choice != 2);
-           
-            break;
-    
-        case 1:
-        // utilisateur
-        printf("Bienvenue utilisateur!\n");
+            } while (choice != 2);
 
-        do {
-            printf("\nMenu:\n");
-            printf("1. Sign Up\n");
-            printf("2. Log In\n");
-            printf("4. Exit\n");
-            printf("Veuillez entrer votre choix: ");
-            scanf("%d", &choice);
-
-            switch (choice) {
-                case 1:
-                    username = signUp();
-                    // Après l'inscription, on affiche un menu spécifique
-                    menuPostConnexion(username);
-                    break;
-                case 2:
-                    username = login(); 
-                    menuPostConnexion(username); // Après la connexion réussie
-                    
-                    break;
-                case 4:
-                    printf("Au revoir !\n");
-                    break;
-                default:
-                    printf("Choix invalide. Veuillez réessayer.\n");
-            }
-        } while (choice != 4);
             break;
+        }
+        case 3:
+            // quitter
+            printf("Au revoir !\n");
+            exit(0);
+
     }
+} while (choix != 1 && choix != 2 && choix != 3);
 
     return 0;
 }
