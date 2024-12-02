@@ -29,6 +29,11 @@ typedef struct {
     int mois;
     int annee;
 } Date;
+typedef struct {
+
+    int mois;
+    int annee;
+} Date2;
 
 typedef struct {
     int heure;
@@ -75,15 +80,39 @@ typedef struct {
     char username[USERNAME_LENGTH];
     char password[PASSWORD_LENGTH];
 } User;
+
 typedef struct {
-    char username[MAX_USERNAME_LENGTH];
-    char voyage_id[9];
+    char numero_carte[20];
+    char titulaire_carte[50];
+    Date2 date_expiration;
+    char code_securite[5];
+} InformationsPaiement;
+typedef struct {
+    char username[50];
+    char voyage_id[30];
     int nb_places_reservees;
+    Date date_reservation;
+    float montant_paye;
 } Reservation;
 
 
 
 
+
+
+
+
+//recuperer la date
+// Fonction pour obtenir la date du jour
+void obtenir_date_du_jour(Date *date) {
+    time_t maintenant = time(NULL); // Obtenir le timestamp actuel
+    struct tm *temps_local = localtime(&maintenant); // Convertir en temps local
+
+    // Remplir la structure Date
+    date->jour = temps_local->tm_mday;
+    date->mois = temps_local->tm_mon + 1; // Les mois vont de 0 (janvier) à 11 (décembre)
+    date->annee = temps_local->tm_year + 1900; // Année depuis 1900, donc on ajoute 1900
+}
 
 
 
@@ -324,42 +353,95 @@ int demanderChoixVoyage(int index_max) {
 
     return choix_voyage;
 }
-void confirmerReservationInterne(FILE *fichier, const char *username, int choix_voyage, int nb_places, char *depart, char *arrive, Date date) {
-    VoyageInterne voyage;
+
+// Fonction pour traiter le paiement avec saisie et validation
+int traiterPaiement(const char *username, float montant_total) {
+    InformationsPaiement payement;
+
+    printf("\n=== Processus de Paiement ===\n");
+    printf("Utilisateur: %s\n", username);
+    printf("Montant total à payer : %.2f\n", montant_total);
+
+    // Demander les informations de paiement
+    printf("Entrez le numéro de la carte de crédit (16 chiffres): ");
+    scanf("%s", payement.numero_carte);
+    printf("Entrez la date d'expiration de la carte (MM/AA) : ");
+    scanf("%d %d", &payement.date_expiration.mois,&payement.date_expiration.annee);
+    printf("Entrez le titulaire de la carte : ");
+    scanf(" %[^\n]", payement.titulaire_carte);// Pour accepter des espaces dans le nom du titulaire
+     printf("Code de sécurité (CVV, 3 chiffres) : ");
+    scanf("%4s", payement.code_securite);
+
+
+    if (strlen(payement.numero_carte) != 16 || strlen(payement.code_securite) != 3) {
+        printf("Erreur : Les informations de paiement sont invalides.\n");
+        return 0; // Paiement invalide
+    }
+
+
+    // Simuler un paiement réussi
+    printf("\nPaiement de %.2f par la carte %s réussi !\n", montant_total, payement.numero_carte);
+    printf("Merci pour votre confiance!\n");
+
+    // Dans un système réel, vous pourriez également vérifier que le paiement est approuvé via un API ou un service bancaire.
+
+    return 1;  // Paiement réussi
+}
+
+void enregistrerReservationInterne(const char *username, VoyageInterne voyage, int nb_places, float montant_paye) {
+    FILE *reservation_file = fopen("reservationsInterne.bin", "ab");
+    if (reservation_file == NULL) {
+        perror("Erreur lors de l'ouverture du fichier des réservations internes.\n");
+        return;
+    }
+
     Reservation reservation;
+    strcpy(reservation.username, username);
+    strcpy(reservation.voyage_id, voyage.id);
+    reservation.nb_places_reservees = nb_places;
+    reservation.montant_paye = montant_paye;  // Enregistrement du montant payé
+
+    // Simule la date actuelle
+    obtenir_date_du_jour(&reservation.date_reservation);
+
+    fwrite(&reservation, sizeof(Reservation), 1, reservation_file);
+    fclose(reservation_file);
+
+    printf("Les informations de réservation et le montant payé ont été enregistrées pour le voyage interne.\n");
+}
+
+
+void confirmerReservationInterne(FILE *fichier, const char *username, int choix_voyage, int nb_places,
+                                  char *aeroport_depart, char *aeroport_arrive, Date date) {
+    VoyageInterne voyage;
     int index = 1;
 
     rewind(fichier);
     while (fread(&voyage, sizeof(VoyageInterne), 1, fichier)) {
-        if (strcmp(voyage.aeroport_depart, depart) == 0 &&
-            strcmp(voyage.aeroport_arrive, arrive) == 0 &&
+        if (strcmp(voyage.aeroport_depart, aeroport_depart) == 0 &&
+            strcmp(voyage.aeroport_arrive, aeroport_arrive) == 0 &&
             voyage.date_voyage.jour == date.jour &&
             voyage.date_voyage.mois == date.mois &&
             voyage.date_voyage.annee == date.annee &&
             voyage.nb_place >= nb_places) {
 
             if (index == choix_voyage) {
+                // Étape 1 : Traitement du paiement
+                float montant_total =  voyage.prix * nb_places ; // Calcul du montant total à payer
+
+                int paiement_reussi = traiterPaiement(username, montant_total);
+                if (!paiement_reussi) {
+                    printf("Paiement annulé. Réservation non effectuée.\n");
+                    return;
+                }
+
+                // Étape 2 : Mise à jour des places disponibles
                 voyage.nb_place -= nb_places;
                 fseek(fichier, -sizeof(VoyageInterne), SEEK_CUR);
                 fwrite(&voyage, sizeof(VoyageInterne), 1, fichier);
 
-                // Sauvegarde de la réservation dans le fichier utilisateur
-                FILE *reservation_file;
-                char filename[50];
-                snprintf(filename, sizeof(filename), "reservation_%s.bin", username);
-                reservation_file = fopen(filename, "ab");
-                if (reservation_file == NULL) {
-                    perror("Erreur lors de la création du fichier de réservation.");
-                    fclose(fichier);
-                    return;
-                }
-
-                // Initialiser la réservation
-                strcpy(reservation.username, username);
-                strcpy(reservation.voyage_id, voyage.id);
-                reservation.nb_places_reservees = nb_places;
-                fwrite(&reservation, sizeof(Reservation), 1, reservation_file);
-                fclose(reservation_file);
+                // Étape 3 : Enregistrement de la réservation avec le montant payé
+                enregistrerReservationInterne(username, voyage, nb_places, montant_total);
 
                 printf("Réservation confirmée pour %d place(s) pour le voyage %s.\n", nb_places, voyage.id);
                 break;
@@ -368,6 +450,8 @@ void confirmerReservationInterne(FILE *fichier, const char *username, int choix_
         }
     }
 }
+
+
 
 
 void ReserverVoyageInterne(const char *username) {
@@ -463,11 +547,37 @@ int afficherVoyagesDisponiblesExterne(FILE *fichier, const char *pays_depart, co
     return voyage_trouve ? index - 1 : 0;
 }
 
+
+
+// Fonction pour enregistrer la réservation avec informations de paiement
+void enregistrerReservationExterne(const char *username, VoyageExterne voyage, int nb_places, float montant_paye) {
+    FILE *reservation_file = fopen("reservationsExterne.bin", "ab");
+    if (reservation_file == NULL) {
+        perror("Erreur lors de l'ouverture du fichier des réservations externes.\n");
+        return;
+    }
+
+    Reservation reservation;
+    strcpy(reservation.username, username);
+    strcpy(reservation.voyage_id, voyage.id);
+    reservation.nb_places_reservees = nb_places;
+    reservation.montant_paye = montant_paye;  // Enregistrement du montant payé
+
+    // Simule la date actuelle
+    obtenir_date_du_jour(&reservation.date_reservation);
+
+    fwrite(&reservation, sizeof(Reservation), 1, reservation_file);
+    fclose(reservation_file);
+
+    printf("Les informations de réservation et le montant payé ont été enregistrées pour le voyage externe.\n");
+}
+
+
 // confirmation de reservation
+
 void confirmerReservationExterne(FILE *fichier, const char *username, int choix_voyage, int nb_places,
                                   char *pays_depart, char *pays_arrive, char *aeroport_depart, char *aeroport_arrive, Date date) {
     VoyageExterne voyage;
-    Reservation reservation;
     int index = 1;
 
     rewind(fichier);
@@ -482,27 +592,22 @@ void confirmerReservationExterne(FILE *fichier, const char *username, int choix_
             voyage.nb_place >= nb_places) {
 
             if (index == choix_voyage) {
+                // Étape 1 : Traitement du paiement
+                float montant_total =  voyage.prix * nb_places ; // Calcul du montant total à payer
+                printf("Le montant total à payer est : %.2f\n", montant_total);
+                int paiement_reussi = traiterPaiement(username, montant_total);
+                if (!paiement_reussi) {
+                    printf("Paiement annulé. Réservation non effectuée.\n");
+                    return;
+                }
+
+                // Étape 2 : Mise à jour des places disponibles
                 voyage.nb_place -= nb_places;
                 fseek(fichier, -sizeof(VoyageExterne), SEEK_CUR);
                 fwrite(&voyage, sizeof(VoyageExterne), 1, fichier);
 
-                // Sauvegarde de la réservation dans le fichier utilisateur
-                FILE *reservation_file;
-                char filename[50];
-                snprintf(filename, sizeof(filename), "reservation_%s.bin", username);
-                reservation_file = fopen(filename, "ab");
-                if (reservation_file == NULL) {
-                    perror("Erreur lors de la création du fichier de réservation.");
-                    fclose(fichier);
-                    return;
-                }
-
-                // Initialiser la réservation
-                strcpy(reservation.username, username);
-                strcpy(reservation.voyage_id, voyage.id);
-                reservation.nb_places_reservees = nb_places;
-                fwrite(&reservation, sizeof(Reservation), 1, reservation_file);
-                fclose(reservation_file);
+                // Étape 3 : Enregistrement de la réservation avec le montant payé
+                enregistrerReservationExterne(username, voyage, nb_places, montant_total);
 
                 printf("Réservation confirmée pour %d place(s) pour le voyage %s.\n", nb_places, voyage.id);
                 break;
@@ -511,6 +616,7 @@ void confirmerReservationExterne(FILE *fichier, const char *username, int choix_
         }
     }
 }
+
 
 
 //reservetion de voyages externe ;
@@ -569,10 +675,9 @@ void ReserverVoyage(char* username){
             ReserverVoyageInterne(username);
             break;
         case 2:
-           // ReserverVoyageExterne(username);
+            ReserverVoyageExterne(username);
             break;
         case 3:
-
             break;
         default:
             printf("Choix invalide!\n");
@@ -1233,6 +1338,71 @@ void modifierVoyage(){
 
 
 
+FILE* Ouvrir_Fichier(const char *nom_fichier, const char *mode) {
+    FILE *fichier = fopen(nom_fichier, mode);
+    if (fichier == NULL) {
+        fprintf(stderr, "Erreur: Impossible d'ouvrir le fichier %s en mode %s.\n", nom_fichier, mode);
+        return NULL;  // Retourne NULL si l'ouverture échoue
+    }
+    return fichier;
+}
+
+
+void afficherReservations(FILE* fichier) {
+
+
+    Reservation reservation;
+    printf("\n=== Liste des Réservations Externes ===\n");
+    printf("%-20s %-15s %-10s %-12s %-20s\n",
+           "Nom d'utilisateur", "ID Voyage", "Places", "Date", "Paiement");
+    printf("--------------------------------------------------------------\n");
+
+    while (fread(&reservation, sizeof(Reservation), 1, fichier)) {
+        printf("%-20s %-15s %-10d %02d/%02d/%04d       %.2f\n",
+               reservation.username,
+               reservation.voyage_id,
+               reservation.nb_places_reservees,
+               reservation.date_reservation.jour,
+               reservation.date_reservation.mois,
+               reservation.date_reservation.annee,
+               reservation.montant_paye);
+         printf("--------------------------------------------------------------\n");
+    }
+
+    fclose(fichier);
+}
+
+void ConsulterVoyages(){
+    int c;
+    do{
+        printf("Voulez-vous consulter :\n");
+        printf("              1. Reservations Internes ;\n");
+        printf("              2. Reservations Externes ;\n");
+        printf("              3. Quitter\n");
+        printf("Entrer votre choix :");
+        scanf("%d",&c);
+        switch (c)
+                {
+                case 1:{
+                    FILE *fichier =Ouvrir_Fichier("reservationsInterne.bin","rb");
+                    afficherReservations(fichier);
+                    break;
+                }
+                case 2:{
+                    FILE *fichier =Ouvrir_Fichier("reservationsExterne.bin","rb");
+                    afficherReservations(fichier);
+                    break;
+                }
+
+               case 3:
+                    break;
+                }
+
+    }while(c!=3);
+
+}
+
+
 //Menu d'administrateur
 void MenuAdministrateur(){
     int c;
@@ -1243,7 +1413,8 @@ void MenuAdministrateur(){
                 printf("2/ Ajout d'une ligne\n");
                 printf("3/ Supprimer d'une ligne\n");
                 printf("4/ Modifier les information de voyage \n");
-                printf("5/ QUITTER\n");
+                printf("5/ Consulter les reservations \n");
+                printf("6/ QUITTER\n");
                 printf("Donner votre choix : ");
                 scanf("%d",&c);
                 switch (c)
@@ -1267,6 +1438,9 @@ void MenuAdministrateur(){
                      modifierVoyage();
                      break;
                 case 5:
+                     ConsulterVoyages();
+                     break;
+                case 6:
                     //quitter
                      printf("Retour au programme principal.\n");
                      break;
@@ -1276,7 +1450,7 @@ void MenuAdministrateur(){
                      break;
          }
 
-            }while(c != 5);
+            }while(c != 6);
 
 }
 
@@ -1329,11 +1503,16 @@ int main() {
                 case 1:
                     username = signUp();
                     // Après l'inscription, on affiche un menu spécifique
-                    menuPostConnexion(username);
+                    if(username!=NULL){
+                        menuPostConnexion(username);
+                    }
+
                     break;
                 case 2:
                     username = login();
-                    menuPostConnexion(username); // Après la connexion réussie
+                    if(username!=NULL){
+                        menuPostConnexion(username);
+                    }
 
                     break;
                 case 3:
