@@ -753,6 +753,8 @@ void menuPostConnexion(char* username) {
 //fonction generator Id
 void generateUniqueID(char *id) {
     static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    srand(time(NULL)); // Seed the random number generator
+
     id[0] = alphabet[rand() % (sizeof(alphabet) - 1)]; // Generate a random alphabetic character
 
     for (int i = 1; i < ID_LENGTH; i++) { // Generate 7 random digits
