@@ -287,9 +287,9 @@ void afficherLignes() {
             default:
                 printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
         }
-    } while (choix != 3);
+    } 
+}while (choix != 3);
 }
-
 
 
 
