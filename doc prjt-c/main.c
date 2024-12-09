@@ -260,17 +260,18 @@ void afficherLignes() {
                     printf("\n==========================================================================\n");
                     printf("           LIGNES EXTERNES DISPONIBLES\n");
                     printf("==========================================================================\n");
-                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s |\n",
-                           "ID", "Départ", "Arrivée", "Date", "Prix ($)");
+                    printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-8s | %-10s |\n",
+                           "ID", "Départ (Pays)", "Arrivée (Pays)", "Aéroport Départ", "Aéroport Arrivée",
+                           "Date", "Prix ($)", "Classe");
                     printf("--------------------------------------------------------------------------\n");
 
                     while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
                         found = 1;
-                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d |\n",
-                               voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
-                               voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                               voyage.prix);
-                    }
+                        printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %02d/%02d/%04d | %-8d | %-10s |\n",
+                                 voyage.id, voyage.pays_depart, voyage.pays_arrivee,
+                                 voyage.aeroport_depart, voyage.aeroport_arrive,
+                                 voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                                 voyage.prix, voyage.classe);
 
                     if (!found) {
                         printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
@@ -1339,7 +1340,6 @@ void modifierVoyage(){
 }
 
 
-
 FILE* Ouvrir_Fichier(const char *nom_fichier, const char *mode) {
     FILE *fichier = fopen(nom_fichier, mode);
     if (fichier == NULL) {
@@ -1405,6 +1405,250 @@ void ConsulterVoyages(){
 }
 
 
+
+
+
+
+
+
+//partie de statistiques
+
+// Fonction pour obtenir l'année et le mois actuel
+void getCurrentYearAndMonth(int* year, int* month) {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    *year = tm.tm_year + 1900; // tm_year commence à partir de 1900
+    *month = tm.tm_mon + 1;    // tm_mon commence à partir de 0 (janvier)
+}
+
+// Fonction pour générer un rapport mensuel des réservations
+char* generateMonthlyReport() {
+    int year, month;
+    getCurrentYearAndMonth(&year, &month);
+
+    // Ouvrir le fichier binaire des réservations
+    FILE *binFile = fopen("reservationsInterne.bin", "rb");
+    if (!binFile) {
+        printf("Erreur : Impossible d'ouvrir reservationsInterne.bin.\n");
+        return NULL;  // Retourner NULL en cas d'erreur
+    }
+
+    // Lire les réservations depuis le fichier binaire
+    Reservation reservations[MAX_RESERVATIONS];
+    int numReservations = fread(reservations, sizeof(Reservation), MAX_RESERVATIONS, binFile);
+    fclose(binFile);
+
+    // Créer un nom de fichier basé sur l'année et le mois
+    static char filename[256];  // Utiliser static pour conserver le nom du fichier après la fonction
+    snprintf(filename, sizeof(filename), "%d-%02d_reservations.txt", year, month);
+
+    // Ouvrir le fichier texte pour écrire les résultats
+    FILE *txtFile = fopen(filename, "w");
+    if (!txtFile) {
+        printf("Erreur : Impossible de créer le fichier %s.\n", filename);
+        return NULL;  // Retourner NULL en cas d'erreur
+    }
+
+    // Initialiser un tableau pour compter les réservations par jour (31 jours max)
+    int reservationsPerDay[31] = {0};  // Tableau pour 31 jours
+
+    // Comptabiliser les réservations pour chaque jour du mois
+    for (int i = 0; i < numReservations; i++) {
+        // Vérifier si la réservation est pour le mois et l'année actuels
+        if (reservations[i].date_reservation.mois == month && reservations[i].date_reservation.annee == year) {
+            reservationsPerDay[reservations[i].date_reservation.jour - 1] += reservations[i].nb_places_reservees;
+        }
+    }
+
+    // Écrire les résultats dans le fichier texte
+    for (int day = 0; day < 31; day++) {
+        if (reservationsPerDay[day] > 0) {
+            fprintf(txtFile, "%d %d \n ", day + 1, reservationsPerDay[day]);
+        }
+    }
+
+    fclose(txtFile);
+    printf("Le rapport des réservations pour %d-%02d a été généré dans %s\n", year, month, filename);
+
+    return filename;  // Retourner le nom du fichier généré
+}
+
+
+
+void ReservationM() {
+    // Appeler la fonction pour générer le rapport et obtenir le nom du fichier
+    char* filename = generateMonthlyReport();
+
+    if (filename != NULL) {
+        // Construire la commande pour exécuter le script Python
+        char command[512];
+        snprintf(command, sizeof(command), "python graphes/grapheM.py %s", filename);
+
+        // Appeler le script Python avec system()
+        int result = system(command);
+
+        if (result == 0) {
+            printf("Le graphe a été tracé avec succès.\n");
+        } else {
+            printf("Erreur lors de l'exécution du script Python.\n");
+        }
+    } else {
+        printf("Erreur lors de la génération du rapport ou du tracé.\n");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+// reservation annuelle
+// Fonction pour obtenir l'année actuelle
+void getCurrentYear(int* year) {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    *year = tm.tm_year + 1900; // tm_year commence à partir de 1900
+}
+
+// Fonction pour générer un rapport annuel des réservations
+char* generateAnnualReport() {
+    int year;
+    getCurrentYear(&year);
+
+    // Ouvrir le fichier binaire des réservations
+    FILE *binFile = fopen("reservationsInterne.bin", "rb");
+    if (!binFile) {
+        printf("Erreur : Impossible d'ouvrir reservationsInterne.bin.\n");
+        return NULL;  // Retourner NULL en cas d'erreur
+    }
+
+    // Lire les réservations depuis le fichier binaire
+    Reservation reservations[MAX_RESERVATIONS];
+    int numReservations = fread(reservations, sizeof(Reservation), MAX_RESERVATIONS, binFile);
+    fclose(binFile);
+
+    // Créer un nom de fichier basé sur l'année
+    static char filename[256];  // Utiliser static pour conserver le nom du fichier après la fonction
+    snprintf(filename, sizeof(filename), "%d_annual_reservations.txt", year);
+
+    // Ouvrir le fichier texte pour écrire les résultats
+    FILE *txtFile = fopen(filename, "w");
+    if (!txtFile) {
+        printf("Erreur : Impossible de créer le fichier %s.\n", filename);
+        return NULL;  // Retourner NULL en cas d'erreur
+    }
+
+    // Initialiser un tableau pour compter les réservations par mois (12 mois)
+    int reservationsPerMonth[12] = {0};  // Tableau pour 12 mois
+
+    // Comptabiliser les réservations pour chaque mois de l'année
+    for (int i = 0; i < numReservations; i++) {
+        if (reservations[i].date_reservation.annee == year) {
+            reservationsPerMonth[reservations[i].date_reservation.mois - 1] += reservations[i].nb_places_reservees;
+        }
+    }
+
+    // Écrire les résultats dans le fichier texte (mois et nombre de réservations)
+    for (int month = 0; month < 12; month++) {
+        if (reservationsPerMonth[month] > 0) {
+            fprintf(txtFile, "%d %d \n ", month + 1, reservationsPerMonth[month]);
+        }
+    }
+
+    fclose(txtFile);
+    printf("Le rapport des réservations pour l'année %d a été généré dans %s\n", year, filename);
+
+    return filename;  // Retourner le nom du fichier généré
+}
+
+
+// Fonction principale qui appelle les deux fonctions : Génération du rapport et tracé avec Gnuplot
+void ReservationA() {
+    // Appeler la fonction pour générer le rapport annuel et obtenir le nom du fichier
+    char* filename = generateAnnualReport();
+
+    if (filename != NULL) {
+        // Construire la commande pour exécuter le script Python
+        char command[512];
+        snprintf(command, sizeof(command), "python graphes/grapheA.py %s", filename);
+
+        // Appeler le script Python avec system()
+        int result = system(command);
+
+        if (result == 0) {
+            printf("Le graphe annuel a été tracé avec succès.\n");
+        } else {
+            printf("Erreur lors de l'exécution du script Python.\n");
+        }
+    } else {
+        printf("Erreur lors de la génération du rapport ou du tracé.\n");
+    }
+}
+
+
+
+
+
+void statistiqueReservation(){
+    int c;
+    do{
+            printf("\nStatistique:\n");
+            printf("            1.Monssuelle \n");
+            printf("            2.Annuelle\n");
+            printf("Entrez votre choix: ");
+            scanf("%d",&c);
+            switch (c)
+                {
+                case 1:
+                     ReservationM();
+                     break;
+                case 2:{
+                     ReservationA();
+
+                    break;
+                }
+               default:
+                     printf("Choix invalide! Veuillez réessayer.\n");
+                     break;
+         }
+
+
+
+    }while(c!=2);
+
+
+}
+
+
+void ConsulterStatistique(){
+    int c ;
+    do{
+        printf("voulez-vous consulter :\n");
+        printf("            1.Le nombre de reservation \n");
+        printf("            2.Le revenue \n");
+        printf("Entrez votre choix: ");
+        scanf("%d",&c);
+        switch (c)
+                {
+                case 1:
+                     statistiqueReservation();
+                     break;
+                case 2:{
+                    //statistiqueRevenue();
+
+                    break;
+                }
+               default:
+                     printf("Choix invalide! Veuillez réessayer.\n");
+                     break;
+         }
+    }while(c!=2);
+}
+
 //Menu d'administrateur
 void MenuAdministrateur(){
     int c;
@@ -1416,7 +1660,8 @@ void MenuAdministrateur(){
                 printf("3/ Supprimer d'une ligne\n");
                 printf("4/ Modifier les information de voyage \n");
                 printf("5/ Consulter les reservations \n");
-                printf("6/ QUITTER\n");
+                printf("6/ Consulter les Statistiques \n");
+                printf("7/ QUITTER\n");
                 printf("Donner votre choix : ");
                 scanf("%d",&c);
                 switch (c)
@@ -1443,7 +1688,10 @@ void MenuAdministrateur(){
                      ConsulterVoyages();
                      break;
                 case 6:
-                    //quitter
+                     ConsulterStatistique();
+                     break;
+                case 7:
+                    
                      printf("Retour au programme principal.\n");
                      break;
 
@@ -1452,9 +1700,12 @@ void MenuAdministrateur(){
                      break;
          }
 
-            }while(c != 6);
+            }while(c != 7);
 
 }
+
+
+
 
 
 
