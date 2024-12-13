@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <windows.h>
+#include <conio.h>
+
 
 #define MAX_USERS 100
 #define NAME_LENGTH 30
-#define MAX_NOM 50
 #define SURNAME_LENGTH 30
 #define USERNAME_LENGTH 30
 #define PASSWORD_LENGTH 30
@@ -18,7 +20,7 @@
 #define FILEadmin "admin.bin"
 #define FILEvoyageInterne "voyageInterne.bin"
 #define FILEvoyageExterne "voyageExterne.bin"
-
+#define FILENAME "compagnies.bin"
 
 
 
@@ -96,6 +98,22 @@ typedef struct {
     float montant_paye;
 } Reservation;
 
+typedef struct {
+    char nom[30];  // Nom de la compagnie
+    char pays[30]; // Pays d'origine de la compagnie
+    int annee_creation; // Année de création de la compagnie
+    int nb_avions;  // Nombre d'avions dans la flotte
+} Compagnie;
+typedef struct {
+    char id_contrat[20];  // Identifiant du contrat
+    char date_debut[15];  // Date de début du contrat (format: dd/mm/yyyy)
+    char date_fin[15];    // Date de fin du contrat (format: dd/mm/yyyy)
+    float montant;        // Montant du contrat
+} Contrat;
+
+
+
+
 
 
 
@@ -118,21 +136,41 @@ void obtenir_date_du_jour(Date *date) {
 
 
 //partie utilisateur
+void hide_input(char* input) {
+    char ch;
+    int i = 0;
+    while (1) {
+        ch = _getch();  // Lire un caractère sans l'afficher
+        if (ch == 13) {  // Touche Enter
+            break;
+        } else if (ch == 8) {  // Touche Backspace
+            if (i > 0) {
+                i--;
+                printf("\b \b");  // Effacer l'astérisque précédent
+            }
+        } else {
+            input[i] = ch;
+            i++;
+            printf("*");  // Afficher un astérisque
+        }
+    }
+    input[i] = '\0';  // Terminer la chaîne de caractères
+}
 
 // Signup function
 char* signUp() {
-    static char username[USERNAME_LENGTH];  // Déclaration statique pour pouvoir le retourner
+    static char username[USERNAME_LENGTH];
+    char confirmermotdepasse[30];
     User newUser;
-    FILE *file = fopen(FILEuser, "ab+");  // Open the file in binary append mode
+    FILE *file = fopen(FILEuser, "ab+");
 
     if (file == NULL) {
         printf("Erreur lors de l'ouverture du fichier.\n");
-        return NULL;  // Retourner NULL en cas d'erreur d'ouverture
+        return NULL;
     }
 
     printf("Inscription:\n");
 
-    // Collect user information
     printf("Entrez votre nom: ");
     scanf("%s", newUser.nom);
     printf("Entrez votre prénom: ");
@@ -144,204 +182,85 @@ char* signUp() {
     printf("Entrez un nom d'utilisateur: ");
     scanf("%s", newUser.username);
 
-    // Check if the username already exists
+    // Vérifier si le nom d'utilisateur existe déjà
     User tempUser;
-    rewind(file);  // Rewind to the beginning of the file for checking
+    rewind(file);
     while (fread(&tempUser, sizeof(User), 1, file)) {
         if (strcmp(tempUser.username, newUser.username) == 0) {
             printf("Ce nom d'utilisateur est déjà pris.\n");
             fclose(file);
-            return NULL;  // Retourner NULL si le nom d'utilisateur existe déjà
+            return NULL;
         }
     }
 
+    // Masquer la saisie du mot de passe
     printf("Entrez un mot de passe: ");
-    scanf("%s", newUser.password);
+    hide_input(newUser.password);
 
-    // Write user information to the file
+    // Masquer la confirmation du mot de passe
+    printf("\nConfirmer le mot de passe: ");
+    hide_input(confirmermotdepasse);
+
+    // Vérifier que les mots de passe correspondent
+    while (strcmp(newUser.password, confirmermotdepasse) != 0) {
+        printf("\nConfirmation de mot de passe incorrect, veuillez essayer !\n");
+        printf("Entrez un mot de passe: ");
+        hide_input(newUser.password);
+        printf("\nConfirmer le mot de passe: ");
+        hide_input(confirmermotdepasse);
+    }
+
+    // Écrire les informations de l'utilisateur dans le fichier
     fwrite(&newUser, sizeof(User), 1, file);
     fclose(file);
 
-    // Store the username in the static variable
     strcpy(username, newUser.username);
-    printf("Inscription réussie ! Bienvenue %s %s\n", newUser.nom, newUser.prenom);
+    printf("\nInscription réussie ! Bienvenue %s %s\n", newUser.nom, newUser.prenom);
 
-    return username;  // Retourner le nom d'utilisateur après l'inscription
+    return username;
 }
+
+
 
 
 
 
 char* login() {
-    static char username[USERNAME_LENGTH];
+    static char username[USERNAME_LENGTH];  // Déclaration statique pour pouvoir le retourner
     User user;
     FILE *file = fopen(FILEuser, "rb");
 
     if (file == NULL) {
         printf("Erreur lors de l'ouverture du fichier.\n");
-        return NULL;
+        return NULL;  // Retourner NULL si le fichier ne s'ouvre pas
     }
 
     printf("Connexion:\n");
     printf("Entrez votre nom d'utilisateur: ");
-    scanf("%s", user.username);
-    printf("Entrez votre mot de passe: ");
-    scanf("%s", user.password);
+    scanf("%s", user.username);  // Récupérer le nom d'utilisateur
 
+    // Masquer la saisie du mot de passe
+    printf("Entrez votre mot de passe: ");
+    hide_input(user.password);  // Masquer la saisie du mot de passe
 
     User tempUser;
     while (fread(&tempUser, sizeof(User), 1, file)) {
+        // Comparer les informations d'utilisateur avec celles du fichier
         if (strcmp(tempUser.username, user.username) == 0 && strcmp(tempUser.password, user.password) == 0) {
-
-            strcpy(username, tempUser.username);
-            printf("Connexion réussie ! Bienvenue, %s %s.\n", tempUser.nom, tempUser.prenom);
+            strcpy(username, tempUser.username);  // Copier le nom d'utilisateur
+            printf("\nConnexion réussie ! Bienvenue, %s %s.\n", tempUser.nom, tempUser.prenom);
             fclose(file);  // Fermer le fichier
-            return username;  // Connexion réussie, retourner le username
+            return username;  // Connexion réussie, retourner le nom d'utilisateur
         }
     }
 
-    printf("Nom d'utilisateur ou mot de passe incorrect.\n");
+    printf("\nNom d'utilisateur ou mot de passe incorrect.\n");
     fclose(file);  // Fermer le fichier si l'authentification échoue
     return NULL;  // Connexion échouée
 }
 
 
-//Fonction pour afficher les lignes existantes
-void afficherLignes(char* username) {
-    int choix;
 
-    do {
-        printf("\n===========================\n");
-        printf("  AFFICHAGE DES LIGNES\n");
-        printf("===========================\n");
-        printf("1. Lignes internes\n");
-        printf("2. Lignes externes\n");
-        printf("3. Retour\n");
-        printf("Votre choix : ");
-        scanf("%d", &choix);
-
-        switch (choix) {
-            case 1: {
-                FILE *file = fopen(FILEvoyageInterne, "rb");
-                if (!file) {
-                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
-                } else {
-                    VoyageInterne voyage;
-                    int found = 0;
-
-                    printf("\n==============================================================================\n");
-                    printf("           LIGNES INTERNES DISPONIBLES\n");
-                    printf("==============================================================================\n");
-                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n",
-                        "ID", "Départ", "Arrivée", "Date", "Prix");
-                    printf("------------------------------------------------------------------------------\n");
-
-                    while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
-                        found = 1;
-                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD |\n",
-                            voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
-                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                            voyage.prix);
-                    }
-                     if (found) {
-                        int choixReservation;
-                        printf("\nSouhaitez-vous réserver un vol interne ? \n 1: Oui\n 2: Retour au menu principal \n ");
-                        scanf("%d", &choixReservation);
-
-                       switch (choixReservation) {
-
-                       case 1:
-                        ReserverVoyageInterne(username);
-                       break;
-
-                       case 2:
-                        printf("Retour au menu principal.\n");
-                        afficherLignes(username);
-                        return;
-
-                        default:
-                        printf("Choix invalide.\n");
-                     }
-
-                      break;
-                   }
-        
-
-                    if (!found) {
-                        printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
-                    }
-
-                    printf("==============================================================================\n");
-                    fclose(file);
-                }
-                break;
-            }
-    
-            case 2: {
-                FILE *file = fopen(FILEvoyageExterne, "rb");
-                if (!file) {
-                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
-                } else {
-                    VoyageExterne voyage;
-                    int found = 0;
-
-                      printf("\n=====================================================================================================================================\n");
-                      printf("                                  VOLS INTERNATIONAUX DISPONIBLES\n");
-                      printf("=====================================================================================================================================\n");
-                      printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s|\n",
-                             "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
-                            "Date", "Prix", "Classe");
-                      printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
-
-                    while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
-                        found = 1;
-                        printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n",
-                            voyage.id, voyage.pays_depart, voyage.pays_arrivee,
-                            voyage.aeroport_depart, voyage.aeroport_arrive,
-                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                            voyage.prix, voyage.classe);
-                    }
-
-                     if (found) {
-                        int choixReservation;
-                        printf("\nSouhaitez-vous réserver un vol externe ? \n 1: Oui\n 2: Retour au menu principal \n ");
-                        scanf("%d", &choixReservation);
-
-                       switch (choixReservation) {
-
-                       case 1:
-                        ReserverVoyageExterne(username);
-                       break;
-                       
-                       case 2:
-                        printf("Retour au menu principal.\n");
-                        afficherLignes(username);
-                        return;
-
-                        default:
-                        printf("Choix invalide.\n");
-                     }
-
-                      break;
-                   }
-
-                    if (!found) {
-                        printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
-                    }
-
-                      printf("=====================================================================================================================================\n");
-                    fclose(file);
-                }
-                break;
-            }
-            case 3:
-                printf("\nRetour au menu principal.\n");
-                break;
-            default:
-                printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
-        }
-    } while (choix != 3);
-}
 
 
 
@@ -421,8 +340,8 @@ int traiterPaiement(const char *username, float montant_total) {
     printf("Entrez la date d'expiration de la carte (MM/AA) : ");
     scanf("%d %d", &payement.date_expiration.mois,&payement.date_expiration.annee);
 
-        printf("Entrez le titulaire de la carte : ");
-    char buffer[MAX_NOM + 1]; // +1 pour le caractère de fin de chaîne
+    printf("Entrez le titulaire de la carte : ");
+    char buffer[30]; 
     if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
         buffer[strcspn(buffer, "\n")] = '\0'; // Supprimer le caractère de nouvelle ligne
         strncpy(payement.titulaire_carte, buffer, sizeof(payement.titulaire_carte) - 1);
@@ -554,6 +473,8 @@ void ReserverVoyageInterne(const char *username) {
 
     fclose(fichier);
 }
+
+
 
 
 
@@ -811,6 +732,144 @@ void afficherReservationsExternes(const char* username) {
 
 
 
+//Fonction pour afficher les lignes existantes
+void afficherLignes(char* username) {
+    int choix;
+
+    do {
+        printf("\n===========================\n");
+        printf("  AFFICHAGE DES LIGNES\n");
+        printf("===========================\n");
+        printf("1. Lignes internes\n");
+        printf("2. Lignes externes\n");
+        printf("3. Retour\n");
+        printf("Votre choix : ");
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1: {
+                FILE *file = fopen(FILEvoyageInterne, "rb");
+                if (!file) {
+                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
+                } else {
+                    VoyageInterne voyage;
+                    int found = 0;
+
+                    printf("\n==============================================================================\n");
+                    printf("           LIGNES INTERNES DISPONIBLES\n");
+                    printf("==============================================================================\n");
+                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n",
+                        "ID", "Départ", "Arrivée", "Date", "Prix");
+                    printf("------------------------------------------------------------------------------\n");
+
+                    while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
+                        found = 1;
+                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD |\n",
+                            voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
+                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                            voyage.prix);
+                    }
+                     if (found) {
+                        int choixReservation;
+                        printf("\nSouhaitez-vous réserver un vol interne ? \n 1: Oui\n 2: Retour au menu principal \n ");
+                        scanf("%d", &choixReservation);
+
+                       switch (choixReservation) {
+
+                       case 1:
+                        ReserverVoyageInterne(username);
+                       break;
+
+                       case 2:
+                        printf("Retour au menu principal.\n");
+                        afficherLignes(username);
+                        return;
+
+                        default:
+                        printf("Choix invalide.\n");
+                     }
+
+                      break;
+                   }
+        
+
+                    if (!found) {
+                        printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
+                    }
+
+                    printf("==============================================================================\n");
+                    fclose(file);
+                }
+                break;
+            }
+    
+            case 2: {
+                FILE *file = fopen(FILEvoyageExterne, "rb");
+                if (!file) {
+                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
+                } else {
+                    VoyageExterne voyage;
+                    int found = 0;
+
+                      printf("\n=====================================================================================================================================\n");
+                      printf("                                  VOLS INTERNATIONAUX DISPONIBLES\n");
+                      printf("=====================================================================================================================================\n");
+                      printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s|\n",
+                             "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
+                            "Date", "Prix", "Classe");
+                      printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+
+                    while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
+                        found = 1;
+                        printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n",
+                            voyage.id, voyage.pays_depart, voyage.pays_arrivee,
+                            voyage.aeroport_depart, voyage.aeroport_arrive,
+                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                            voyage.prix, voyage.classe);
+                    }
+
+                     if (found) {
+                        int choixReservation;
+                        printf("\nSouhaitez-vous réserver un vol externe ? \n 1: Oui\n 2: Retour au menu principal \n ");
+                        scanf("%d", &choixReservation);
+
+                       switch (choixReservation) {
+
+                       case 1:
+                        ReserverVoyageExterne(username);
+                       break;
+                       
+                       case 2:
+                        printf("Retour au menu principal.\n");
+                        afficherLignes(username);
+                        return;
+
+                        default:
+                        printf("Choix invalide.\n");
+                     }
+
+                      break;
+                   }
+
+                    if (!found) {
+                        printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
+                    }
+
+                      printf("=====================================================================================================================================\n");
+                    fclose(file);
+                }
+                break;
+            }
+            case 3:
+                printf("\nRetour au menu principal.\n");
+                break;
+            default:
+                printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
+        }
+    } while (choix != 3);
+}
+
+
 
 
 
@@ -843,12 +902,12 @@ void menuPostConnexion(char* username) {
                 break;               
 
             case 5: 
-               menuPostConnexion(username);
+                 printf("au revoir !\n");
                  break;
             default:
                 printf("Choix invalide.\n");
         }
-    } while (choix != 3);
+    } while (choix != 5);
 }
 
 
@@ -895,7 +954,7 @@ void generateUniqueID(char *id) {
     id[ID_LENGTH] = '\0'; // Null-terminate the string
 }
 
-//fonction login admin
+
 int loginAdmin() {
     User admin;
     FILE *file = fopen(FILEadmin, "rb"); // Ouvrir en mode binaire
@@ -906,10 +965,26 @@ int loginAdmin() {
     }
 
     printf("Connexion administrateur:\n");
+
+    // Saisie de l'identifiant
     printf("Entrez votre Identifiant: ");
     scanf("%s", admin.username);
+
+    // Saisie du mot de passe masqué
     printf("Entrez votre mot de passe: ");
-    scanf("%s", admin.password);
+    char ch;
+    int index = 0;
+    while ((ch = getch()) != '\r') { // '\r' pour Enter (sous Windows)
+        if (ch == '\b' && index > 0) { // Gérer le retour arrière
+            index--;
+            printf("\b \b"); // Efface un caractère
+        } else if (ch != '\b') {
+            admin.password[index++] = ch;
+            printf("*"); // Affiche une étoile pour chaque caractère
+        }
+    }
+    admin.password[index] = '\0'; // Terminer la chaîne
+    printf("\n");
 
     // Vérification des informations d'identification de l'administrateur
     User tempAdmin;
@@ -1535,6 +1610,95 @@ void ConsulterVoyages(){
 
 }
 
+
+void afficherLignesAdmin() {
+    int choix;
+
+    do {
+        printf("\n===========================\n");
+        printf("  AFFICHAGE DES LIGNES\n");
+        printf("===========================\n");
+        printf("1. Lignes internes\n");
+        printf("2. Lignes externes\n");
+        printf("3. Retour\n");
+        printf("Votre choix : ");
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1: {
+                FILE *file = fopen(FILEvoyageInterne, "rb");
+                if (!file) {
+                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
+                } else {
+                    VoyageInterne voyage;
+                    int found = 0;
+
+                    printf("\n==============================================================================\n");
+                    printf("           LIGNES INTERNES DISPONIBLES\n");
+                    printf("==============================================================================\n");
+                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n",
+                        "ID", "Départ", "Arrivée", "Date", "Prix");
+                    printf("------------------------------------------------------------------------------\n");
+
+                    while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
+                        found = 1;
+                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD |\n",
+                            voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
+                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                            voyage.prix);
+                    }
+
+                    if (!found) {
+                        printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
+                    }
+
+                    printf("==============================================================================\n");
+                    fclose(file);
+                }
+                break;
+            }
+            case 2: {
+                FILE *file = fopen(FILEvoyageExterne, "rb");
+                if (!file) {
+                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
+                } else {
+                    VoyageExterne voyage;
+                    int found = 0;
+
+                      printf("\n=====================================================================================================================================\n");
+                      printf("                                  VOLS INTERNATIONAUX DISPONIBLES\n");
+                      printf("=====================================================================================================================================\n");
+                      printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s|\n",
+                             "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
+                            "Date", "Prix", "Classe");
+                      printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+
+                    while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
+                        found = 1;
+                        printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n",
+                            voyage.id, voyage.pays_depart, voyage.pays_arrivee,
+                            voyage.aeroport_depart, voyage.aeroport_arrive,
+                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                            voyage.prix, voyage.classe);
+                    }
+
+                    if (!found) {
+                        printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
+                    }
+
+                      printf("=====================================================================================================================================\n");
+                    fclose(file);
+                }
+                break;
+            }
+            case 3:
+                printf("\nRetour au menu principal.\n");
+                break;
+            default:
+                printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
+        }
+    } while (choix != 3);
+}
 
 
 
@@ -2195,9 +2359,196 @@ void ConsulterStatistique(){
     }while(c!=2);
 }
 
+
+// Fonction pour ajouter une compagnie
+void ajouterCompagnie() {
+    Compagnie nouvelleCompagnie;
+    Contrat nouveauContrat;
+
+    // Encodage UTF-8 pour afficher correctement les caractères spéciaux
+    SetConsoleOutputCP(CP_UTF8);
+
+    // Saisie des informations sur la compagnie
+    printf("Entrez le nom de la compagnie: ");
+    scanf("%29s", nouvelleCompagnie.nom);
+
+    printf("Entrez le pays d'origine de la compagnie: ");
+    scanf("%29s", nouvelleCompagnie.pays);
+
+    printf("Entrez l'année de création de la compagnie: ");
+    scanf("%d", &nouvelleCompagnie.annee_creation);
+
+    printf("Entrez le nombre d'avions dans la flotte: ");
+    scanf("%d", &nouvelleCompagnie.nb_avions);
+
+    // Saisie des informations sur le contrat
+    printf("\nEntrez l'identifiant du contrat: ");
+    scanf("%19s", nouveauContrat.id_contrat);
+
+    printf("Entrez la date de début du contrat (dd/mm/yyyy): ");
+    scanf("%14s", nouveauContrat.date_debut);
+
+    printf("Entrez la date de fin du contrat (dd/mm/yyyy): ");
+    scanf("%14s", nouveauContrat.date_fin);
+
+    printf("Entrez le montant du contrat: ");
+    scanf("%f", &nouveauContrat.montant);
+
+    // Ouverture du fichier en mode ajout binaire
+    FILE *fichier = fopen(FILENAME, "ab");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        return;
+    }
+
+    // Écriture des données dans le fichier
+    fwrite(&nouvelleCompagnie, sizeof(Compagnie), 1, fichier);
+    fwrite(&nouveauContrat, sizeof(Contrat), 1, fichier);
+
+    fclose(fichier);
+    printf("Compagnie et contrat ajoutés avec succès.\n");
+}
+
+// Fonction pour supprimer une compagnie
+void supprimerCompagnie() {
+    char nomCompagnie[30];
+
+    // Saisie du nom de la compagnie à supprimer
+    printf("Entrez le nom de la compagnie à supprimer: ");
+    scanf("%29s", nomCompagnie);
+
+    FILE *fichier = fopen(FILENAME, "rb");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        return;
+    }
+
+    // Calcul de la taille du fichier
+    fseek(fichier, 0, SEEK_END);
+    long taille_fichier = ftell(fichier);
+    fseek(fichier, 0, SEEK_SET);
+
+    long nb_compagnies = taille_fichier / (sizeof(Compagnie) + sizeof(Contrat));
+    Compagnie compagnie;
+    Contrat contrat;
+    Compagnie compagnies[nb_compagnies];
+    Contrat contrats[nb_compagnies];
+    long i = 0;
+
+    // Lecture des données dans des tableaux temporaires
+    while (fread(&compagnie, sizeof(Compagnie), 1, fichier)) {
+        fread(&contrat, sizeof(Contrat), 1, fichier);
+        compagnies[i] = compagnie;
+        contrats[i] = contrat;
+        i++;
+    }
+
+    fclose(fichier);
+
+    // Réouverture du fichier en mode écriture
+    fichier = fopen(FILENAME, "wb");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier en mode écriture.\n");
+        return;
+    }
+
+    // Réécriture des données en ignorant la compagnie à supprimer
+    int trouve = 0;
+    for (i = 0; i < nb_compagnies; i++) {
+        if (strcmp(compagnies[i].nom, nomCompagnie) != 0) {
+            fwrite(&compagnies[i], sizeof(Compagnie), 1, fichier);
+            fwrite(&contrats[i], sizeof(Contrat), 1, fichier);
+        } else {
+            trouve = 1;
+        }
+    }
+
+    fclose(fichier);
+
+    if (trouve) {
+        printf("La compagnie '%s' a été supprimée.\n", nomCompagnie);
+    } else {
+        printf("La compagnie '%s' n'a pas été trouvée.\n", nomCompagnie);
+    }
+}
+
+
+void afficherCompagnies() {
+    FILE *fichier = fopen(FILENAME, "rb");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        return;
+    }
+
+    Compagnie compagnie;
+    Contrat contrat;
+    int compteur = 0;
+
+    printf("\nListe des compagnies enregistrées :\n");
+    printf("----------------------------------------------------------\n");
+
+    // Lire et afficher chaque compagnie et son contrat
+    while (fread(&compagnie, sizeof(Compagnie), 1, fichier)) {
+        fread(&contrat, sizeof(Contrat), 1, fichier); // Lire le contrat correspondant
+        compteur++;
+        printf("Compagnie %d :\n", compteur);
+        printf("  Nom              : %s\n", compagnie.nom);
+        printf("  Pays d'origine   : %s\n", compagnie.pays);
+        printf("  Année de création: %d\n", compagnie.annee_creation);
+        printf("  Nombre d'avions  : %d\n", compagnie.nb_avions);
+        printf("  Contrat associé :\n");
+        printf("    ID Contrat     : %s\n", contrat.id_contrat);
+        printf("    Date de début  : %s\n", contrat.date_debut);
+        printf("    Date de fin    : %s\n", contrat.date_fin);
+        printf("    Montant        : %.2f\n", contrat.montant);
+        printf("----------------------------------------------------------\n");
+    }
+
+    fclose(fichier);
+
+    if (compteur == 0) {
+        printf("Aucune compagnie enregistrée.\n");
+    }
+}
+
+
+void informationCompagnie(){
+    int c ;
+    do{
+        printf("\nCompagnie:\n");
+        printf("1/ Ajouter Compagnie\n");
+        printf("2/ Supprime Compagnie\n");
+        printf("3/ affichier listes des compagnies\n");
+
+        scanf("%d",&c);
+                switch (c)
+                {
+                case 1:
+                     ajouterCompagnie();
+                     break;
+                case 2:{
+                    supprimerCompagnie();
+                    break;
+                }
+                case 3:
+                     afficherCompagnies();
+                     break;
+                case 4:
+                     printf("Retour au programme principal.\n");
+                     break;
+
+               default:
+                     printf("Choix invalide! Veuillez réessayer.\n");
+                     break;
+
+    }
+}while(c!=4);
+}
+
+
 //Menu d'administrateur
 void MenuAdministrateur(){
-    int c; char *username;
+    int c;
     do{
 
                 printf("\nMenu Administrateur:\n");
@@ -2207,13 +2558,14 @@ void MenuAdministrateur(){
                 printf("4/ Modifier les information de voyage \n");
                 printf("5/ Consulter les reservations \n");
                 printf("6/ Consulter les Statistiques \n");
-                printf("7/ QUITTER\n");
+                printf("7/ Informations sur les Compagnies \n");
+                printf("8/ QUITTER\n");
                 printf("Donner votre choix : ");
                 scanf("%d",&c);
                 switch (c)
                 {
                 case 1:
-                     afficherLignes(username);
+                     afficherLignesAdmin();
                      break;
                 case 2:{
                     //ajouter une ligne;
@@ -2237,6 +2589,9 @@ void MenuAdministrateur(){
                      ConsulterStatistique();
                      break;
                 case 7:
+                     informationCompagnie();
+                     break;
+                case 8:
 
                      printf("Retour au programme principal.\n");
                      break;
@@ -2246,7 +2601,7 @@ void MenuAdministrateur(){
                      break;
          }
 
-            }while(c != 7);
+            }while(c != 8);
 
 }
 
@@ -2255,22 +2610,7 @@ void MenuAdministrateur(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int main() {
+void MenuePrincipal(){
     int choix;
     int choice;
     char* username;  // Indicateur de connexion réussie
@@ -2360,5 +2700,17 @@ int main() {
     }
 } while (choix != 1 && choix != 2 && choix != 3);
 
+   
+}
+
+
+
+
+
+
+
+int main() {
+    SetConsoleOutputCP(CP_UTF8); // UTF-8 pour le support des accents
+    MenuePrincipal();
     return 0;
 }
