@@ -2,6 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <conio.h>
+#include <windows.h> 
+#include <locale.h>
+
+
+
+
+   
+
 
 #define MAX_USERS 100
 #define NAME_LENGTH 30
@@ -17,10 +26,7 @@
 #define FILEadmin "admin.bin"
 #define FILEvoyageInterne "voyageInterne.bin"
 #define FILEvoyageExterne "voyageExterne.bin"
-
-
-
-
+#define FILENAME "compagnies.bin"
 
 //****************************** */
 // Flight information structures
@@ -95,6 +101,20 @@ typedef struct {
     float montant_paye;
 } Reservation;
 
+typedef struct {
+    char nom[30];  // Nom de la compagnie
+    char pays[30]; // Pays d'origine de la compagnie
+    int annee_creation; // Année de création de la compagnie
+    int nb_avions;  // Nombre d'avions dans la flotte
+} Compagnie;
+typedef struct {
+    char id_contrat[20];  // Identifiant du contrat
+    char date_debut[15];  // Date de début du contrat (format: dd/mm/yyyy)
+    char date_fin[15];    // Date de fin du contrat (format: dd/mm/yyyy)
+    float montant;        // Montant du contrat
+} Contrat;
+
+
 
 
 
@@ -117,21 +137,41 @@ void obtenir_date_du_jour(Date *date) {
 
 
 //partie utilisateur
+void hide_input(char* input) {
+    char ch;
+    int i = 0;
+    while (1) {
+        ch = _getch();  // Lire un caractère sans l'afficher
+        if (ch == 13) {  // Touche Enter
+            break;
+        } else if (ch == 8) {  // Touche Backspace
+            if (i > 0) {
+                i--;
+                printf("\b \b");  // Effacer l'astérisque précédent
+            }
+        } else {
+            input[i] = ch;
+            i++;
+            printf("*");  // Afficher un astérisque
+        }
+    }
+    input[i] = '\0';  // Terminer la chaîne de caractères
+}
 
 // Signup function
 char* signUp() {
-    static char username[USERNAME_LENGTH];  // Déclaration statique pour pouvoir le retourner
+    static char username[USERNAME_LENGTH];
+    char confirmermotdepasse[30];
     User newUser;
-    FILE *file = fopen(FILEuser, "ab+");  // Open the file in binary append mode
+    FILE *file = fopen(FILEuser, "ab+");
 
     if (file == NULL) {
         printf("Erreur lors de l'ouverture du fichier.\n");
-        return NULL;  // Retourner NULL en cas d'erreur d'ouverture
+        return NULL;
     }
 
     printf("Inscription:\n");
 
-    // Collect user information
     printf("Entrez votre nom: ");
     scanf("%s", newUser.nom);
     printf("Entrez votre prénom: ");
@@ -143,67 +183,82 @@ char* signUp() {
     printf("Entrez un nom d'utilisateur: ");
     scanf("%s", newUser.username);
 
-    // Check if the username already exists
+    // Vérifier si le nom d'utilisateur existe déjà
     User tempUser;
-    rewind(file);  // Rewind to the beginning of the file for checking
+    rewind(file);
     while (fread(&tempUser, sizeof(User), 1, file)) {
         if (strcmp(tempUser.username, newUser.username) == 0) {
             printf("Ce nom d'utilisateur est déjà pris.\n");
             fclose(file);
-            return NULL;  // Retourner NULL si le nom d'utilisateur existe déjà
+            return NULL;
         }
     }
 
+    // Masquer la saisie du mot de passe
     printf("Entrez un mot de passe: ");
-    scanf("%s", newUser.password);
+    hide_input(newUser.password);
 
-    // Write user information to the file
+    // Masquer la confirmation du mot de passe
+    printf("\nConfirmer le mot de passe: ");
+    hide_input(confirmermotdepasse);
+
+    // Vérifier que les mots de passe correspondent
+    while (strcmp(newUser.password, confirmermotdepasse) != 0) {
+        printf("\nConfirmation de mot de passe incorrect, veuillez essayer !\n");
+        printf("Entrez un mot de passe: ");
+        hide_input(newUser.password);
+        printf("\nConfirmer le mot de passe: ");
+        hide_input(confirmermotdepasse);
+    }
+
+    // Écrire les informations de l'utilisateur dans le fichier
     fwrite(&newUser, sizeof(User), 1, file);
     fclose(file);
 
-    // Store the username in the static variable
     strcpy(username, newUser.username);
-    printf("Inscription réussie ! Bienvenue %s %s\n", newUser.nom, newUser.prenom);
+    printf("\nInscription réussie ! Bienvenue %s %s\n", newUser.nom, newUser.prenom);
 
-    return username;  // Retourner le nom d'utilisateur après l'inscription
+    return username;
 }
+
+
 
 
 
 
 char* login() {
-    static char username[USERNAME_LENGTH];
+    static char username[USERNAME_LENGTH];  // Déclaration statique pour pouvoir le retourner
     User user;
     FILE *file = fopen(FILEuser, "rb");
 
     if (file == NULL) {
         printf("Erreur lors de l'ouverture du fichier.\n");
-        return NULL;
+        return NULL;  // Retourner NULL si le fichier ne s'ouvre pas
     }
 
     printf("Connexion:\n");
     printf("Entrez votre nom d'utilisateur: ");
-    scanf("%s", user.username);
-    printf("Entrez votre mot de passe: ");
-    scanf("%s", user.password);
+    scanf("%s", user.username);  // Récupérer le nom d'utilisateur
 
+    // Masquer la saisie du mot de passe
+    printf("Entrez votre mot de passe: ");
+    hide_input(user.password);  // Masquer la saisie du mot de passe
 
     User tempUser;
     while (fread(&tempUser, sizeof(User), 1, file)) {
+        // Comparer les informations d'utilisateur avec celles du fichier
         if (strcmp(tempUser.username, user.username) == 0 && strcmp(tempUser.password, user.password) == 0) {
-
-            strcpy(username, tempUser.username);
-            printf("Connexion réussie ! Bienvenue, %s %s.\n", tempUser.nom, tempUser.prenom);
+            strcpy(username, tempUser.username);  // Copier le nom d'utilisateur
+            printf("\nConnexion réussie ! Bienvenue, %s %s.\n", tempUser.nom, tempUser.prenom);
             fclose(file);  // Fermer le fichier
-            return username;  // Connexion réussie, retourner le username
+            return username;  // Connexion réussie, retourner le nom d'utilisateur
         }
     }
 
-    printf("Nom d'utilisateur ou mot de passe incorrect.\n");
+    printf("\nNom d'utilisateur ou mot de passe incorrect.\n");
     fclose(file);  // Fermer le fichier si l'authentification échoue
     return NULL;  // Connexion échouée
 }
-
 
 //Fonction pour afficher les lignes existantes
 void afficherLignes() {
@@ -2068,6 +2123,127 @@ void ConsulterStatistique(){
     }while(c!=2);
 }
 
+
+
+
+void ajouterCompagnie() {
+    Compagnie nouvelleCompagnie;
+    Contrat nouveauContrat;
+
+    // Demander à l'utilisateur les informations sur la compagnie
+    printf("Entrez le nom de la compagnie: ");
+    fgets(nouvelleCompagnie.nom, 30, stdin);
+    nouvelleCompagnie.nom[strcspn(nouvelleCompagnie.nom, "\n")] = '\0'; // Supprimer le retour à la ligne
+
+    printf("Entrez le pays d'origine de la compagnie: ");
+    fgets(nouvelleCompagnie.pays, 30, stdin);
+    nouvelleCompagnie.pays[strcspn(nouvelleCompagnie.pays, "\n")] = '\0';
+
+    printf("Entrez l'année de création de la compagnie: ");
+    scanf("%d", &nouvelleCompagnie.annee_creation);
+
+    printf("Entrez le nombre d'avions dans la flotte: ");
+    scanf("%d", &nouvelleCompagnie.nb_avions);
+    getchar();  // Consomme le retour à la ligne restant après scanf
+
+    // Demander les informations du contrat
+    printf("\nEntrez l'identifiant du contrat: ");
+    fgets(nouveauContrat.id_contrat, 20, stdin);
+    nouveauContrat.id_contrat[strcspn(nouveauContrat.id_contrat, "\n")] = '\0';  // Supprimer le retour à la ligne
+
+    printf("Entrez la date de début du contrat (dd/mm/yyyy): ");
+    fgets(nouveauContrat.date_debut, 15, stdin);
+    nouveauContrat.date_debut[strcspn(nouveauContrat.date_debut, "\n")] = '\0';
+
+    printf("Entrez la date de fin du contrat (dd/mm/yyyy): ");
+    fgets(nouveauContrat.date_fin, 15, stdin);
+    nouveauContrat.date_fin[strcspn(nouveauContrat.date_fin, "\n")] = '\0';
+
+    printf("Entrez le montant du contrat: ");
+    scanf("%f", &nouveauContrat.montant);
+
+    // Ouvrir le fichier en mode "ajout binaire"
+    FILE *fichier = fopen(FILENAME, "ab");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        return;
+    }
+
+    // Écrire la nouvelle compagnie dans le fichier binaire
+    fwrite(&nouvelleCompagnie, sizeof(Compagnie), 1, fichier);
+
+    // Écrire le contrat dans le fichier binaire
+    fwrite(&nouveauContrat, sizeof(Contrat), 1, fichier);
+
+    // Fermer le fichier
+    fclose(fichier);
+    printf("Compagnie et contrat ajoutés avec succès.\n");
+}
+
+//supprimer une compagnie:
+void supprimerCompagnie() {
+    char nomCompagnie[30];
+
+    // Demander à l'utilisateur le nom de la compagnie à supprimer
+    printf("Entrez le nom de la compagnie à supprimer: ");
+    fgets(nomCompagnie, 30, stdin);
+    nomCompagnie[strcspn(nomCompagnie, "\n")] = '\0';  // Supprimer le retour à la ligne
+
+    FILE *fichier = fopen(FILENAME, "rb");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        return;
+    }
+
+    // Calculer la taille du fichier
+    fseek(fichier, 0, SEEK_END);
+    long taille_fichier = ftell(fichier);
+    fseek(fichier, 0, SEEK_SET);
+
+    // Lire toutes les compagnies et contrats dans un tableau temporaire
+    long nb_compagnies = taille_fichier / (sizeof(Compagnie) + sizeof(Contrat));
+    Compagnie compagnie;
+    Contrat contrat;
+    Compagnie compagnies[nb_compagnies];
+    Contrat contrats[nb_compagnies];
+    long i = 0;
+
+    while (fread(&compagnie, sizeof(Compagnie), 1, fichier)) {
+        fread(&contrat, sizeof(Contrat), 1, fichier);
+        compagnies[i] = compagnie;
+        contrats[i] = contrat;
+        i++;
+    }
+
+    fclose(fichier);
+
+    // Ouvrir le fichier en mode "écriture binaire" pour réécrire les données
+    fichier = fopen(FILENAME, "wb");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier en mode écriture.\n");
+        return;
+    }
+
+    // Écrire à nouveau les compagnies et contrats, en ignorant celle à supprimer
+    int trouve = 0;
+    for (i = 0; i < nb_compagnies; i++) {
+        if (strcmp(compagnies[i].nom, nomCompagnie) != 0) {
+            fwrite(&compagnies[i], sizeof(Compagnie), 1, fichier);
+            fwrite(&contrats[i], sizeof(Contrat), 1, fichier);
+        } else {
+            trouve = 1; // Marquer si on trouve la compagnie à supprimer
+        }
+    }
+
+    fclose(fichier);
+
+    if (trouve) {
+        printf("La compagnie '%s' a été supprimée.\n", nomCompagnie);
+    } else {
+        printf("La compagnie '%s' n'a pas été trouvée.\n", nomCompagnie);
+    }
+}
+
 //Menu d'administrateur
 void MenuAdministrateur(){
     int c;
@@ -2135,103 +2311,10 @@ void MenuAdministrateur(){
 
 
 
-
-
-
-
-
-
-
-
 int main() {
-    int choix;
-    int choice;
-    char* username;  // Indicateur de connexion réussie
-     int loggedIn;
-
-    do {
-        printf("Etes-vous :\n");
-        printf("              1. User\n");
-        printf("              2. Admin\n");
-        printf("              3. Exit\n");
-        printf("Veuillez entrer votre choix: ");
-        scanf("%d", &choix);
-
-
-    switch (choix) {
-        case 1:{
-        // utilisateur
-        printf("Bienvenue utilisateur!\n");
-
-        do {
-            printf("\nMenu:\n");
-            printf("1. Sign Up\n");
-            printf("2. Log In\n");
-            printf("3. Exit\n");
-            printf("Veuillez entrer votre choix: ");
-            scanf("%d", &choice);
-
-            switch (choice) {
-                case 1:
-                    username = signUp();
-                    // Après l'inscription, on affiche un menu spécifique
-                    if(username!=NULL){
-                        menuPostConnexion(username);
-                    }
-
-                    break;
-                case 2:
-                    username = login();
-                    if(username!=NULL){
-                        menuPostConnexion(username);
-                    }
-
-                    break;
-                case 3:
-                    printf("Au revoir !\n");
-                    break;
-                default:
-                    printf("Choix invalide. Veuillez réessayer.\n");
-            }
-            } while (choice != 3);
-            break;
-        }
-
-        case 2:{
-            // administrateur
-            printf("Bienvenue Administrateur!\n");
-            do {
-            printf("\nMenu:\n");
-            printf("1. Log In\n");
-            printf("2. Exit\n");
-            printf("Veuillez entrer votre choix: ");
-            scanf("%d", &choice);
-
-            switch (choice) {
-                case 1:
-                    loggedIn = loginAdmin();
-                    if (loggedIn) {
-                        MenuAdministrateur(); // Après la connexion réussie
-                    }
-                    break;
-                case 2:
-
-                    printf("Au revoir !\n");
-                    break;
-                default:
-                    printf("Choix invalide. Veuillez réessayer.\n");
-            }
-            } while (choice != 2);
-
-            break;
-        }
-        case 3:
-            // quitter
-            printf("Au revoir !\n");
-            exit(0);
-
-    }
-} while (choix != 1 && choix != 2 && choix != 3);
+  
+    MenuePrincipal();
+  
 
     return 0;
 }
