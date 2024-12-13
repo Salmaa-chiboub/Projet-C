@@ -283,12 +283,12 @@ void afficherLignes() {
                     VoyageInterne voyage;
                     int found = 0;
 
-                    printf("\n==========================================================================\n");
+                    printf("\n==============================================================================\n");
                     printf("           LIGNES INTERNES DISPONIBLES\n");
-                    printf("==========================================================================\n");
-                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n", 
+                    printf("==============================================================================\n");
+                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n",
                         "ID", "Départ", "Arrivée", "Date", "Prix");
-                    printf("--------------------------------------------------------------------------\n");
+                    printf("------------------------------------------------------------------------------\n");
 
                     while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
                         found = 1;
@@ -302,7 +302,7 @@ void afficherLignes() {
                         printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
                     }
 
-                    printf("\n==========================================================================\n");
+                    printf("==============================================================================\n");
                     fclose(file);
                 }
                 break;
@@ -315,18 +315,18 @@ void afficherLignes() {
                     VoyageExterne voyage;
                     int found = 0;
 
-                    printf("\n=============================================================================================================\n");
-                    printf("           LIGNES EXTERNES DISPONIBLES\n");
-                    printf("==============================================================================================================\n");
-                    printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-8s MAD | %-10s |\n",
-                        "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
-                        "Date", "Prix", "Classe");
-                    printf("--------------------------------------------------------------------------------------------------------------\n");
+                      printf("\n=====================================================================================================================================\n");
+                      printf("                                  VOLS INTERNATIONAUX DISPONIBLES\n");
+                      printf("=====================================================================================================================================\n");
+                      printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s|\n",
+                             "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
+                            "Date", "Prix", "Classe");
+                      printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
 
                     while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
                         found = 1;
-                        printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD | %-10s |\n",
-                            voyage.id, voyage.pays_depart, voyage.pays_arrivee, 
+                        printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n",
+                            voyage.id, voyage.pays_depart, voyage.pays_arrivee,
                             voyage.aeroport_depart, voyage.aeroport_arrive,
                             voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
                             voyage.prix, voyage.classe);
@@ -336,7 +336,7 @@ void afficherLignes() {
                         printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
                     }
 
-                    printf("\n============================================================================================\n");
+                      printf("=====================================================================================================================================\n");
                     fclose(file);
                 }
                 break;
@@ -932,7 +932,7 @@ void ajouterLigneInterne(FILE *file) {
     printf("Entrez le nom de la compagnie: ");
     scanf("%s", voyage.compagnie);
 
-    printf("Entrez le prix du billet ($): ");
+    printf("Entrez le prix du billet (MAD): ");
     scanf("%d", &voyage.prix);
     printf("Entrez la durée du vol (h:min): ");
 
@@ -982,7 +982,7 @@ void ajouterLigneExterne(FILE *file) {
     printf("Entrez le nom de la compagnie: ");
     scanf("%s", voyage.compagnie);
 
-    printf("Entrez le prix du billet ($): ");
+    printf("Entrez le prix du billet (MAD): ");
     scanf("%d", &voyage.prix);
 
     printf("Entrez la classe de vol (economy, business, first): ");
@@ -1326,7 +1326,7 @@ void modifierLigneExterne() {
                     scanf("%s", voyage.compagnie);
                     break;
                 case 10:
-                    printf("Nouveau prix : ");
+                    printf("Nouveau prix(MAD) : ");
                     scanf("%d", &voyage.prix);
                     break;
                 case 11:
@@ -1593,10 +1593,10 @@ void ReservationM() {
     if (filename_interne != NULL && filename_externe != NULL) {
         // Construire la commande pour exécuter le script Python avec les deux fichiers
         char command[512];
-        snprintf(command, sizeof(command), 
-            "\"%s\" graphes/reservationsM.py %s %s", 
-            "C:\\Users\\DELL\\AppData\\Local\\Programs\\Python\\Python313\\pythonw.exe", 
-            filename_interne, 
+        snprintf(command, sizeof(command),
+            "\"%s\" graphes/reservationsM.py %s %s",
+            "C:\\Users\\DELL\\AppData\\Local\\Programs\\Python\\Python313\\pythonw.exe",
+            filename_interne,
             filename_externe
         );
 
@@ -1631,7 +1631,7 @@ char* generate_Annual_Internal_reserv_Report() {
     getCurrentYear(&year);
 
 
-    const char* folderName = ""; 
+    const char* folderName = "";
 
     // Ouvrir le fichier binaire des réservations
     FILE *binFile = fopen("reservationsInterne.bin", "rb");
@@ -1741,8 +1741,8 @@ void ReservationA() {
     if (filename_interne != NULL && filename_externe != NULL) {
         // Construire la commande pour exécuter le script Python avec les deux fichiers
         char command[512];
-        snprintf(command, sizeof(command), 
-                 "\"C:\\Users\\DELL\\AppData\\Local\\Programs\\Python\\Python313\\pythonw.exe\" graphes/reservationsA.py %s %s", 
+        snprintf(command, sizeof(command),
+                 "\"C:\\Users\\DELL\\AppData\\Local\\Programs\\Python\\Python313\\pythonw.exe\" graphes/reservationsA.py %s %s",
                  filename_interne, filename_externe);
 
         // Appeler le script Python avec system()
@@ -1906,7 +1906,7 @@ void RevenueM() {
     getCurrentYearAndMonth(&year, &month);  // Récupérer l'année et le mois actuels
 
     // Générer le rapport des revenus mensuels internes
-    char* reportFileInterne = generate_Monthly_Internal_Revenue_Report();  
+    char* reportFileInterne = generate_Monthly_Internal_Revenue_Report();
     // Générer le rapport des revenus mensuels externes
     char* reportFileExterne = generate_Monthly_External_Revenue_Report();
 
@@ -1914,7 +1914,7 @@ void RevenueM() {
         // Construire la commande pour exécuter le script Python avec les deux fichiers
         char command[512];
         snprintf(command, sizeof(command), "C:\\Users\\DELL\\AppData\\Local\\Programs\\Python\\Python313\\pythonw.exe graphes\\revenueM.py %s %s", reportFileInterne, reportFileExterne);
-        
+
         // Exécuter le script Python
         int result = system(command);
 
@@ -2044,7 +2044,7 @@ void RevenueA() {
         // Construire la commande pour exécuter le script Python avec les deux fichiers
         char command[512];
         snprintf(command, sizeof(command), "C:\\Users\\DELL\\AppData\\Local\\Programs\\Python\\Python313\\pythonw.exe graphes\\revenueA.py %s %s", reportFileInterne, reportFileExterne);
-        
+
         // Exécuter le script Python
         int result = system(command);
 
@@ -2286,7 +2286,7 @@ void MenuAdministrateur(){
                      ConsulterStatistique();
                      break;
                 case 7:
-                    
+
                      printf("Retour au programme principal.\n");
                      break;
 
