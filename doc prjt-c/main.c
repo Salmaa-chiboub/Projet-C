@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <windows.h>
+#include <locale.h>
 #include <conio.h>
 
 
