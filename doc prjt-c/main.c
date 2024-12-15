@@ -112,8 +112,108 @@ typedef struct {
     float montant;        // Montant du contrat
 } Contrat;
 
+typedef struct {
+    char nom[50];
+    char prenom[50];
+    char identifiant[30];  // Identifiant unique de l'employé
+    char mot_de_passe[30];  // Mot de passe de l'employé
+    char poste[50];  // Poste de l'employé dans l'agence
+    char ville[50];  // Ville où travaille l'employé
+    char email[100]; // Email de l'employé
+    char telephone[20]; // Numéro de téléphone de l'employé
+} Employe;
 
 
+
+
+
+
+
+
+// Fonction de positionnement du curseur dans la console
+void gotoXY(int x, int y) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD position;
+    position.X = x + 20;
+    position.Y = y;
+    SetConsoleCursorPosition(hConsole, position);
+}
+
+// Fonction pour changer la couleur du texte dans la console
+void SetColor(int color) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+}
+
+// Fonction pour afficher un trait horizontal (trait "gras") au-dessus et en dessous du titre
+void drawBoldLine(int x_centre, int y_centre, int width, int color) {
+    gotoXY(x_centre - width+3, y_centre);
+    SetColor(color);
+    for (int i = 0; i < width; i++) printf("=====");
+    SetColor(7); // Retour à la couleur par défaut (blanc)
+}
+
+// Fonction pour afficher un titre avec des traits horizontaux au-dessus et en dessous
+void drawTitleWithBoldLine(int x_centre, int y_centre, const char *title, int color) {
+    int len = strlen(title);
+    int width = len + 4;  // Largeur du titre avec les espaces ajoutés
+
+    // Dessiner le trait au-dessus du titre
+    drawBoldLine(x_centre-15, y_centre, width, color);
+
+    // Afficher le titre en jaune
+    gotoXY(x_centre - width / 2 + 1, y_centre + 1);
+    SetColor(14);  // Jaune pour le titre
+    printf("  %s ", title);
+
+    // Dessiner le trait en dessous du titre
+    drawBoldLine(x_centre-15, y_centre + 2, width, color);
+
+    SetColor(7);  // Retour à la couleur par défaut (blanc)
+}
+
+// Fonction de choix dans le menu
+int choose_item(char **items, char *title, int x_centre, int y_centre) {
+    int selected_option = 0;
+    int key;
+
+    // Compter les éléments de la liste
+    int item_count = 0;
+    while (items[item_count] != NULL) {
+        item_count++;
+    }
+
+    while (1) {
+        system("cls");
+
+        // Afficher le titre avec les traits
+        drawTitleWithBoldLine(x_centre, y_centre, title, 14);  // Utilisation de la couleur jaune pour les traits
+
+        // Afficher les options du menu avec la sélection mise en évidence
+        for (int i = 0; i < item_count; i++) {
+            gotoXY(x_centre, y_centre + 4 + i * 2);  // Ajouter un espacement entre les options
+            if (i == selected_option) {
+                SetColor(10);  // Vert pour l'option sélectionnée
+                printf("> %s\n", items[i]);
+                SetColor(7);  // Retour à la couleur par défaut
+            } else {
+                printf("%s\n", items[i]);
+            }
+        }
+
+        // Obtenir l'entrée utilisateur pour la navigation
+        key = _getch();
+        if (key == 224) { // Touche de flèche (haut ou bas)
+            key = _getch();
+            if (key == 72 && selected_option > 0) { // Flèche haut
+                selected_option--;
+            } else if (key == 80 && selected_option < item_count - 1) { // Flèche bas
+                selected_option++;
+            }
+        } else if (key == 13) { // Touche Entrée
+            return selected_option;
+        }
+    }
+}
 
 
 
@@ -342,16 +442,7 @@ int traiterPaiement(const char *username, float montant_total) {
     scanf("%d %d", &payement.date_expiration.mois,&payement.date_expiration.annee);
 
     printf("Entrez le titulaire de la carte : ");
-    char buffer[30]; 
-    if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-        buffer[strcspn(buffer, "\n")] = '\0'; // Supprimer le caractère de nouvelle ligne
-        strncpy(payement.titulaire_carte, buffer, sizeof(payement.titulaire_carte) - 1);
-        payement.titulaire_carte[sizeof(payement.titulaire_carte) - 1] = '\0';
-    } else {
-        // Gérer l'erreur de lecture
-        printf("Erreur lors de la lecture du nom du titulaire.\n");
-        return 1;
-    }
+    scanf("%s", payement.titulaire_carte);
     printf("Code de sécurité (CVV, 3 chiffres) : ");
     scanf("%4s", payement.code_securite);
 
@@ -2552,52 +2643,386 @@ void informationCompagnie(){
 }
 
 
+
+//gestion des employes 
+// Fonction pour vérifier si l'identifiant existe déjà dans le fichier
+int identifiantExiste(const char *nom_fichier, const char *identifiant) {
+    FILE *fichier = fopen(nom_fichier, "rb");
+    if (fichier == NULL) {
+        return 0;  // Le fichier n'existe pas encore, donc aucun employé n'est enregistré
+    }
+
+    Employe employe;
+    while (fread(&employe, sizeof(Employe), 1, fichier)) {
+        if (strcmp(employe.identifiant, identifiant) == 0) {
+            fclose(fichier);
+            return 1;  // L'identifiant existe déjà
+        }
+    }
+
+    fclose(fichier);
+    return 0;  // L'identifiant est unique
+}
+
+// Fonction pour ajouter un employé au système et stocker ses informations dans un fichier
+void ajouterEmploye() {
+    Employe employe;
+    const char *nom_fichier = "employe.bin"; // Le fichier dans lequel les employés sont enregistrés
+    
+    // Demander les informations à entrer pour l'employé
+    printf("Nom de l'employé: ");
+    scanf("%49s", employe.nom);
+
+    printf("Prénom de l'employé: ");
+    scanf("%49s", employe.prenom);
+
+    printf("Poste de l'employé: ");
+    scanf("%49s", employe.poste);
+
+    printf("Ville où travaille l'employé: ");
+    scanf("%49s", employe.ville);
+
+    printf("Email de l'employé: ");
+    scanf("%99s", employe.email);
+
+    printf("Numéro de téléphone de l'employé: ");
+    scanf("%19s", employe.telephone);
+
+    // Vérifier que l'identifiant est unique
+    do {
+        printf("Identifiant de connexion (unique): ");
+        scanf("%29s", employe.identifiant);
+        if (identifiantExiste(nom_fichier, employe.identifiant)) {
+            printf("Erreur: cet identifiant existe déjà. Veuillez en saisir un autre.\n");
+        }
+    } while (identifiantExiste(nom_fichier, employe.identifiant));
+
+    printf("Mot de passe: ");
+    scanf("%29s", employe.mot_de_passe);
+
+    // Ouvrir le fichier en mode ajout binaire
+    FILE *fichier = fopen(nom_fichier, "ab");
+    if (fichier == NULL) {
+        printf("Erreur lors de l'ouverture du fichier.\n");
+        return;
+    }
+
+    // Écrire les informations de l'employé dans le fichier
+    fwrite(&employe, sizeof(Employe), 1, fichier);
+
+    // Fermer le fichier
+    fclose(fichier);
+
+    printf("L'employé a été ajouté avec succès.\n");
+}
+
+// Fonction pour supprimer un employé du fichier
+void supprimerEmploye() {
+    char identifiant[30];
+    
+    // Demander à l'administrateur de saisir l'identifiant de l'employé à supprimer
+    printf("Entrez l'identifiant de l'employé à supprimer: ");
+    scanf("%29s", identifiant);
+
+    FILE *fichier = fopen("employe.bin", "rb");
+    if (fichier == NULL) {
+        printf("Le fichier n'existe pas.\n");
+        return;
+    }
+
+    FILE *tempFile = fopen("temp.bin", "wb");
+    if (tempFile == NULL) {
+        printf("Erreur lors de la création du fichier temporaire.\n");
+        fclose(fichier);
+        return;
+    }
+
+    Employe employe;
+    int trouve = 0;
+
+    // Parcourir tous les employés et copier dans le fichier temporaire sauf l'employé à supprimer
+    while (fread(&employe, sizeof(Employe), 1, fichier)) {
+        if (strcmp(employe.identifiant, identifiant) != 0) {
+            fwrite(&employe, sizeof(Employe), 1, tempFile);  // Copier l'employé si l'identifiant ne correspond pas
+        } else {
+            trouve = 1;  // L'employé a été trouvé et supprimé
+        }
+    }
+
+    fclose(fichier);
+    fclose(tempFile);
+
+    if (!trouve) {
+        printf("Aucun employé trouvé avec cet identifiant.\n");
+        remove("temp.bin");  // Supprimer le fichier temporaire si aucun employé n'a été trouvé
+        return;
+    }
+
+    // Remplacer l'ancien fichier par le nouveau fichier sans l'employé supprimé
+    remove("employe.bin");  // Supprimer l'ancien fichier
+    rename("temp.bin", "employe.bin");  // Renommer le fichier temporaire en fichier original
+
+    printf("L'employé a été supprimé avec succès.\n");
+}
+
+void afficherEmployes() {
+    FILE *fichier = fopen("employe.bin", "rb");
+    if (fichier == NULL) {
+        printf("Le fichier n'existe pas.\n");
+        return;
+    }
+
+    Employe employe;
+    int compteur = 0;
+
+    printf("Liste des employés :\n");
+
+    // Parcourir le fichier et afficher les informations de chaque employé
+    while (fread(&employe, sizeof(Employe), 1, fichier)) {
+        printf("\nEmployé %d:\n", ++compteur);
+        printf("Nom: %s\n", employe.nom);
+        printf("Prénom: %s\n", employe.prenom);
+        printf("Identifiant: %s\n", employe.identifiant);
+        printf("Poste: %s\n", employe.poste);
+        printf("Ville: %s\n", employe.ville);
+        printf("Email: %s\n", employe.email);
+        printf("Téléphone: %s\n", employe.telephone);
+    }
+
+    fclose(fichier);
+
+    if (compteur == 0) {
+        printf("Aucun employé enregistré.\n");
+    }
+}
+
+
+// Fonction pour supprimer une réservation dans le fichier
+void supprimerReservation(const char *nom_fichier) {
+    char username[50], voyage_id[30];
+    
+    // Demander l'ID de la réservation et le nom d'utilisateur
+    printf("Entrez le nom d'utilisateur de la réservation à supprimer : ");
+    scanf("%49s", username);
+    
+    printf("Entrez l'ID de la réservation à supprimer : ");
+    scanf("%29s", voyage_id);
+    
+    // Ouvrir le fichier des réservations en mode lecture binaire
+    FILE *fichier = fopen(nom_fichier, "rb");
+    if (fichier == NULL) {
+        printf("Erreur d'ouverture du fichier des réservations.\n");
+        return;
+    }
+    
+    // Ouvrir un fichier temporaire pour écrire les réservations restantes
+    FILE *temp_file = fopen("temp.bin", "wb");
+    if (temp_file == NULL) {
+        printf("Erreur lors de la création du fichier temporaire.\n");
+        fclose(fichier);
+        return;
+    }
+
+    Reservation reservation;
+    int found = 0;
+
+    // Parcourir le fichier et écrire les réservations restantes dans le fichier temporaire
+    while (fread(&reservation, sizeof(Reservation), 1, fichier)) {
+        // Vérifier si l'utilisateur et l'ID de la réservation correspondent
+        if (strcmp(reservation.username, username) == 0 && strcmp(reservation.voyage_id, voyage_id) == 0) {
+            printf("Réservation trouvée et supprimée.\n");
+            found = 1;  // Marquer que la réservation a été trouvée et supprimée
+        } else {
+            // Si la réservation ne correspond pas, l'écrire dans le fichier temporaire
+            fwrite(&reservation, sizeof(Reservation), 1, temp_file);
+        }
+    }
+
+    // Fermer les fichiers
+    fclose(fichier);
+    fclose(temp_file);
+
+    // Vérifier si la réservation a été trouvée et supprimée
+    if (!found) {
+        printf("Aucune réservation trouvée avec cet identifiant et nom d'utilisateur.\n");
+        // Supprimer le fichier temporaire s'il n'y a pas eu de suppression
+        remove("temp.bin");
+        return;
+    }
+
+    // Supprimer le fichier original et renommer le fichier temporaire
+    remove(nom_fichier);
+    rename("temp.bin", nom_fichier);  // Le fichier temporaire devient le fichier principal
+
+    printf("La réservation a été supprimée avec succès.\n");
+}
+
+
+void gestionEmploye(){
+    int choix;
+    do {
+        printf("\nMenu de gestion des employés\n");
+        printf("1. Ajouter un employé\n");
+        printf("2. Supprimer un employé\n");
+        printf("3. Afficher les employés\n");
+        printf("4. Quitter\n");
+        printf("Choisissez une option: ");
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1:
+                ajouterEmploye();
+                break;
+            case 2:
+                supprimerEmploye();
+                break;
+            case 3:
+                afficherEmployes();
+                break;
+            case 4:
+                printf("Au revoir!\n");
+                break;
+            default:
+                printf("Choix invalide, essayez encore.\n");
+        }
+    } while (choix != 4);
+
+}
+
+void SupprimerReservations(){
+    int c;
+    char* nom_fichier;
+    do{
+        printf("1. Supprimer une réservation Interne\n");
+        printf("2. Supprimer une réservation Externe\n");
+        printf("3. Quitter\n");
+        printf("Choisissez une option: ");
+        scanf("%d", &c);
+
+        switch (c) {
+            case 1:
+                // Fichier pour les réservations internes
+                nom_fichier = "reservationsInterne.bin";
+                supprimerReservation(nom_fichier);
+                break;
+            case 2:
+                // Fichier pour les réservations externes
+                nom_fichier = "reservationsExterne.bin";
+                supprimerReservation(nom_fichier);
+                break;
+            case 3:
+                printf("Retour au menu précédent.\n");
+                break;
+            default:
+                printf("Choix invalide, essayez encore.\n");
+        }
+    } while (c != 3);  // Quitter si c'est 3
+}
+
+
+
+
+// Fonction pour afficher le menu de gestion des réservations
+void GestionReservations() {
+    int choix;
+
+    do {
+        printf("\nMenu de Gestion des Réservations\n");
+        printf("1. Supprimer une réservation\n");
+        printf("2. Afficher toutes les réservations\n");
+        printf("3. Quitter\n");
+        printf("Choisissez une option: ");
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1:
+                SupprimerReservations();
+                break;
+            case 2:
+                ConsulterVoyages();
+                break;
+            case 3:
+                printf("Au revoir!\n");
+                break;
+            default:
+                printf("Choix invalide, essayez encore.\n");
+        }
+    } while (choix != 3);
+}
+
+
+
+void gestionlignes(){
+    int c;
+    do{
+        printf("1/ Affichier les lignes\n");
+        printf("2/ Ajout d'une ligne\n");
+        printf("3/ Supprimer d'une ligne\n");
+        printf("4/ Modifier une ligne \n");
+        printf("5/ Quitter \n");
+        scanf("%d",&c);
+        switch (c)
+        {
+        case 1:
+            afficherLignesAdmin();
+            break;
+        case 2:{
+            //ajouter une ligne;
+            AjouterLigne();
+            break;
+        }
+        case 3:{
+             //supprimer une ligne
+             supprimerLigne();
+            break;
+        }
+
+        case 4:
+           //modifier un voyage;
+             modifierVoyage();
+            break;
+        case 5:
+            break;
+        default:
+            printf("choix invalide !\n");
+            break;
+        }
+
+    }while (c!=5);
+    
+}
 //Menu d'administrateur
 void MenuAdministrateur(){
     int c;
     do{
 
                 printf("\nMenu Administrateur:\n");
-                printf("1/ Affichier les lignes\n");
-                printf("2/ Ajout d'une ligne\n");
-                printf("3/ Supprimer d'une ligne\n");
-                printf("4/ Modifier les information de voyage \n");
-                printf("5/ Consulter les reservations \n");
-                printf("6/ Consulter les Statistiques \n");
-                printf("7/ Informations sur les Compagnies \n");
-                printf("8/ QUITTER\n");
+                printf("1/ Gestion de Lignes \n");
+                printf("2/ Gestion des reservations \n");
+                printf("3/ Consulter les Statistiques \n");
+                printf("4/ Gestion des Compagnies \n");
+                printf("5/ Gestion des Employes \n");
+                printf("6/ QUITTER\n");
                 printf("Donner votre choix : ");
                 scanf("%d",&c);
                 switch (c)
                 {
                 case 1:
-                     afficherLignesAdmin();
+                     gestionlignes();
                      break;
-                case 2:{
-                    //ajouter une ligne;
-                    AjouterLigne();
-                    break;
-                }
-                case 3:{
-                    //supprimer une ligne
-                    supprimerLigne();
+                case 2:
+                     GestionReservations();
                      break;
-                }
-
-                case 4:
-                     //modifier un voyage;
-                     modifierVoyage();
-                     break;
-                case 5:
-                     ConsulterVoyages();
-                     break;
-                case 6:
+                case 3:
                      ConsulterStatistique();
                      break;
-                case 7:
+                case 4:
                      informationCompagnie();
                      break;
-                case 8:
+                case 5:
+                     gestionEmploye();
+                     break;
+                case 6:
 
                      printf("Retour au programme principal.\n");
                      break;
@@ -2607,7 +3032,7 @@ void MenuAdministrateur(){
                      break;
          }
 
-            }while(c != 8);
+            }while(c != 6);
 
 }
 
@@ -2616,97 +3041,542 @@ void MenuAdministrateur(){
 
 
 
-void MenuePrincipal(){
-    int choix;
-    int choice;
-    char* username;  // Indicateur de connexion réussie
-     int loggedIn;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//// partie employee
+
+
+// Fonction pour vérifier la connexion d'un employé
+int loginEmploye() {
+    system("cls");
+    char identifiant[30];
+    char mot_de_passe[30];
+    int i = 0;
+
+    // Affichage stylisé du titre
+    int x_centre = 40;
+    int y_centre = 5;
+    drawTitleWithBoldLine(x_centre, y_centre, "Connexion Employé", 14);
+
+    // Demander l'identifiant
+    gotoXY(x_centre - 10, y_centre + 4);
+    SetColor(10);  // Vert pour le texte
+    printf("Identifiant: ");
+    SetColor(7);   // Retour à la couleur par défaut
+    scanf("%29s", identifiant);
+
+    // Demander le mot de passe
+    gotoXY(x_centre - 10, y_centre + 6);
+    SetColor(10);
+    printf("Mot de passe: ");
+    SetColor(7);
+    while (1) {
+        char ch = _getch();  // Lire un caractère sans l'afficher
+        if (ch == 13) {  // Si l'utilisateur appuie sur Enter (13 en ASCII)
+            mot_de_passe[i] = '\0';  // Terminer la chaîne de caractères
+            break;
+        } else if (ch == 8 && i > 0) {  // Si c'est la touche Backspace
+            printf("\b \b");  // Effacer le dernier caractère affiché
+            i--;
+        } else {
+            mot_de_passe[i] = ch;  // Ajouter le caractère au mot de passe
+            i++;
+            printf("*");  // Afficher un astérisque pour masquer l'entrée
+        }
+    }
+    printf("\n");
+
+    // Ouvrir le fichier des employés en mode lecture binaire
+    FILE *fichier = fopen("employe.bin", "rb");
+    if (fichier == NULL) {
+        gotoXY(x_centre - 10, y_centre + 8);
+        SetColor(12);  // Rouge pour l'erreur
+        printf("Erreur d'ouverture du fichier des employés.\n");
+        system("pause");
+        SetColor(7);   // Retour à la couleur par défaut
+        return 0;
+    }
+
+    Employe employe;
+    int trouve = 0;
+    while (fread(&employe, sizeof(Employe), 1, fichier)) {
+        // Vérifier si l'identifiant et le mot de passe correspondent
+        if (strcmp(employe.identifiant, identifiant) == 0 && strcmp(employe.mot_de_passe, mot_de_passe) == 0) {
+            fclose(fichier);
+            gotoXY(x_centre - 10, y_centre + 8);
+            SetColor(10);  // Vert pour la réussite
+            printf("Connexion réussie.\n");
+            system("pause");
+            SetColor(7);
+            return 1;  // Connexion réussie
+        }
+    }
+
+    fclose(fichier);
+    gotoXY(x_centre - 10, y_centre + 8);
+    SetColor(12);  // Rouge pour l'erreur
+    printf("Identifiant ou mot de passe incorrect.\n");
+    system("pause");
+    SetColor(7);   // Retour à la couleur par défaut
+    return 0;  // Connexion échouée
+}
+
+
+void ReserverVoyageHorsLineInterne(char *username) {
+    FILE *fichierVoyages = fopen("voyageInterne.bin", "rb");
+    FILE *fichierReservations = fopen("reservationsInterne.bin", "ab"); // Fichier des réservations (ajout binaire)
+    if (fichierVoyages == NULL || fichierReservations == NULL) {
+        printf("Erreur d'ouverture des fichiers.");
+        return;
+    }
+
+    char depart[30], arrive[30];
+    Date date;
+    int nb_places;
+    saisirCriteresRecherche(depart, arrive, &date, &nb_places);
+
+    int nb_voyages_disponibles = afficherVoyagesDisponiblesInternes(fichierVoyages, depart, arrive, date, nb_places);
+    if (nb_voyages_disponibles == 0) {
+        printf("Aucun voyage disponible ne correspond à vos critères.");
+        fclose(fichierVoyages);
+        fclose(fichierReservations);
+        return;
+    }
+
+    int choix_voyage = demanderChoixVoyage(nb_voyages_disponibles);
+    if (choix_voyage == 0) {
+        printf("Réservation annulée.");
+        fclose(fichierVoyages);
+        fclose(fichierReservations);
+        return;
+    }
+
+    // Repositionner le fichier à la première position
+    rewind(fichierVoyages);
+    
+    // Récupérer le voyage choisi
+    VoyageInterne voyage;
+    int index = 1;
+    while (fread(&voyage, sizeof(VoyageInterne), 1, fichierVoyages)) {
+        if (strcmp(voyage.aeroport_depart, depart) == 0 &&
+            strcmp(voyage.aeroport_arrive, arrive) == 0 &&
+            voyage.date_voyage.jour == date.jour &&
+            voyage.date_voyage.mois == date.mois &&
+            voyage.date_voyage.annee == date.annee &&
+            voyage.nb_place >= nb_places) {
+
+            if (index == choix_voyage) {
+                float montant_totale=voyage.prix * nb_places;
+                printf("\nVous avez choisi le voyage : %s\n", voyage.id);
+                printf("\nMontant total à payer: %.2f MAD\n", montant_totale);
+                
+                // Demander la confirmation de la réservation
+                char confirmation;
+                printf("Confirmez-vous la réservation ? (O/N): ");
+                scanf(" %c", &confirmation);
+
+                if (confirmation == 'O' || confirmation == 'o') {
+                    // Mettre à jour le nombre de places disponibles
+                    voyage.nb_place -= nb_places;
+                    
+                    // Créer une structure de réservation
+                    Reservation nouvelleReservation;
+                    strcpy(nouvelleReservation.username, username);
+                    strcpy(nouvelleReservation.voyage_id, voyage.id);
+                    nouvelleReservation.nb_places_reservees = nb_places;
+                    obtenir_date_du_jour(&nouvelleReservation.date_reservation);
+                    nouvelleReservation.montant_paye = voyage.prix * nb_places;
+                    
+                    // Écrire la réservation dans le fichier des réservations
+                    fwrite(&nouvelleReservation, sizeof(Reservation), 1, fichierReservations);
+                    printf("\nRéservation effectuée avec succès !\n");
+                    
+                    // Écrire les modifications dans le fichier des voyages
+                    FILE *fichierTemp = fopen("temp.bin", "wb");
+                    if (fichierTemp == NULL) {
+                        printf("Erreur lors de la mise à jour du fichier des voyages.");
+                        fclose(fichierVoyages);
+                        fclose(fichierReservations);
+                        return;
+                    }
+                    
+                    rewind(fichierVoyages);
+                    VoyageInterne tempVoyage;
+                    while (fread(&tempVoyage, sizeof(VoyageInterne), 1, fichierVoyages)) {
+                        if (strcmp(tempVoyage.id, voyage.id) == 0) {
+                            fwrite(&voyage, sizeof(VoyageInterne), 1, fichierTemp); // Ecrire le voyage mis à jour
+                        } else {
+                            fwrite(&tempVoyage, sizeof(VoyageInterne), 1, fichierTemp); // Ecrire les autres voyages
+                        }
+                    }
+                    
+                    fclose(fichierTemp);
+                    fclose(fichierVoyages);
+                    remove("voyagesInternes.bin");
+                    rename("temp.bin", "voyagesInternes.bin");
+                    fclose(fichierReservations);
+                    return;
+                } else {
+                    printf("\nRéservation annulée.\n");
+                    fclose(fichierVoyages);
+                    fclose(fichierReservations);
+                    return;
+                }
+            }
+            index++;
+        }
+    }
+
+    printf("Erreur : voyage non trouvé.");
+    fclose(fichierVoyages);
+    fclose(fichierReservations);
+}
+
+// Fonction pour réserver un voyage hors ligne pour les voyages externes
+void ReserverVoyageExterneHorsLine(char *username) {
+    FILE *fichierVoyages = fopen("voyageExterne.bin", "rb");
+    FILE *fichierReservations = fopen("reservationsExterne.bin", "ab"); // Fichier des réservations externes (ajout binaire)
+    if (fichierVoyages == NULL || fichierReservations == NULL) {
+        printf("Erreur d'ouverture des fichiers.");
+        return;
+    }
+
+    char pays_depart[30], pays_arrive[30];
+    char aeroport_depart[30], aeroport_arrive[30];
+    Date date;
+    int nb_places;
+    
+    saisirCriteresRechercheExterne(pays_depart, pays_arrive, aeroport_depart, aeroport_arrive, &date, &nb_places);
+
+    int nb_voyages_disponibles = afficherVoyagesDisponiblesExterne(fichierVoyages, pays_depart, pays_arrive, aeroport_depart, aeroport_arrive, date, nb_places);
+    if (nb_voyages_disponibles == 0) {
+        printf("Aucun voyage disponible ne correspond à vos critères.");
+        fclose(fichierVoyages);
+        fclose(fichierReservations);
+        return;
+    }
+
+    int choix_voyage = demanderChoixVoyage(nb_voyages_disponibles);
+    if (choix_voyage == 0) {
+        printf("Réservation annulée.");
+        fclose(fichierVoyages);
+        fclose(fichierReservations);
+        return;
+    }
+
+    // Repositionner le fichier à la première position
+    rewind(fichierVoyages);
+    
+    // Récupérer le voyage choisi
+    VoyageExterne voyage;
+    int index = 1;
+    while (fread(&voyage, sizeof(VoyageExterne), 1, fichierVoyages)) {
+        if (strcmp(voyage.aeroport_depart, aeroport_depart) == 0 &&
+            strcmp(voyage.aeroport_arrive, aeroport_arrive) == 0 &&
+            strcmp(voyage.pays_depart, pays_depart) == 0 &&
+            strcmp(voyage.pays_arrivee, pays_arrive) == 0 &&
+            voyage.date_voyage.jour == date.jour &&
+            voyage.date_voyage.mois == date.mois &&
+            voyage.date_voyage.annee == date.annee &&
+            voyage.nb_place >= nb_places) {
+
+            if (index == choix_voyage) {
+                printf("\nVous avez choisi le voyage : %s\n", voyage.id);
+                printf("\nMontant total à payer: %.2f MAD\n", voyage.prix * nb_places);
+                
+                // Demander la confirmation de la réservation
+                char confirmation;
+                printf("Confirmez-vous la réservation ? (O/N): ");
+                scanf(" %c", &confirmation);
+
+                if (confirmation == 'O' || confirmation == 'o') {
+                    // Mettre à jour le nombre de places disponibles
+                    voyage.nb_place -= nb_places;
+                    
+                    // Créer une structure de réservation
+                    Reservation nouvelleReservation;
+                    strcpy(nouvelleReservation.username, username);
+                    strcpy(nouvelleReservation.voyage_id, voyage.id);
+                    nouvelleReservation.nb_places_reservees = nb_places;
+                    nouvelleReservation.date_reservation = date;
+                    nouvelleReservation.montant_paye = voyage.prix * nb_places;
+                    
+                    // Écrire la réservation dans le fichier des réservations
+                    fwrite(&nouvelleReservation, sizeof(Reservation), 1, fichierReservations);
+                    printf("\nRéservation effectuée avec succès !\n");
+                    
+                    // Écrire les modifications dans le fichier des voyages
+                    FILE *fichierTemp = fopen("temp.bin", "wb");
+                    if (fichierTemp == NULL) {
+                        printf("Erreur lors de la mise à jour du fichier des voyages.");
+                        fclose(fichierVoyages);
+                        fclose(fichierReservations);
+                        return;
+                    }
+                    
+                    rewind(fichierVoyages);
+                    VoyageExterne tempVoyage;
+                    while (fread(&tempVoyage, sizeof(VoyageExterne), 1, fichierVoyages)) {
+                        if (strcmp(tempVoyage.id, voyage.id) == 0) {
+                            fwrite(&voyage, sizeof(VoyageExterne), 1, fichierTemp); // Ecrire le voyage mis à jour
+                        } else {
+                            fwrite(&tempVoyage, sizeof(VoyageExterne), 1, fichierTemp); // Ecrire les autres voyages
+                        }
+                    }
+                    
+                    fclose(fichierTemp);
+                    fclose(fichierVoyages);
+                    remove("voyagesExternes.bin");
+                    rename("temp.bin", "voyagesExternes.bin");
+                    fclose(fichierReservations);
+                    return;
+                } else {
+                    printf("\nRéservation annulée.\n");
+                    fclose(fichierVoyages);
+                    fclose(fichierReservations);
+                    return;
+                }
+            }
+            index++;
+        }
+    }
+
+    printf("Erreur : voyage non trouvé.");
+    fclose(fichierVoyages);
+    fclose(fichierReservations);
+}
+
+void ReserverVoyageHorsLine(char *username) {
+    int choix;
     do {
-        printf("Etes-vous :\n");
-        printf("              1. User\n");
-        printf("              2. Admin\n");
-        printf("              3. Exit\n");
-        printf("Veuillez entrer votre choix: ");
+        printf("\n===== Menu Principal =====\n");
+        printf("1. Réserver un voyage interne\n");
+        printf("2. Réserver un voyage externe\n");
+        printf("0. Quitter\n");
+        printf("Votre choix: ");
         scanf("%d", &choix);
 
+        switch (choix) {
+            case 1:
+                ReserverVoyageHorsLineInterne(username);
+                break;
+            case 2:
+                ReserverVoyageExterneHorsLine(username);
+                break;
+            case 0:
+                printf("Au revoir !\n");
+                break;
+            default:
+                printf("Choix invalide. Veuillez réessayer.\n");
+                break;
+        }
+    } while (choix != 0);
+}
 
-    switch (choix) {
-        case 1:{
-        // utilisateur
-        printf("Bienvenue utilisateur!\n");
+void MenueEmploye() {
+    int selected_option = 0;
+    int key;
+    int x_centre = 40;  // Largeur fixe
+    int y_centre = 5;   // Hauteur fixe, ajustable selon l'espace
+    char *options[] = {"Gestion de Lignes", "Effectuer Reservation(s)", "Consulter Reservation(s)", "Deconnecter"};
+    int num_options = 4;
 
-        do {
-            printf("\nMenu:\n");
-            printf("1. Sign Up\n");
-            printf("2. Log In\n");
-            printf("3. Exit\n");
-            printf("Veuillez entrer votre choix: ");
-            scanf("%d", &choice);
+    do {
+        system("cls");
 
-            switch (choice) {
-                case 1:
+        // Affichage du titre avec les traits "gras"
+        drawTitleWithBoldLine(x_centre, y_centre, "Menu Employé", 14);
+        
+        // Affichage des options du menu avec navigation par flèches
+        for (int i = 0; i < num_options; i++) {
+            gotoXY(x_centre -10, y_centre + 3 + i * 2);
+            if (i == selected_option) {
+                SetColor(10);  // Couleur verte pour l'option sélectionnée
+                printf("> %s\n", options[i]);
+            } else {
+                SetColor(7);  // Couleur blanche par défaut
+                printf("%s\n", options[i]);
+            }
+        }
+
+        // Obtenir l'entrée de l'utilisateur
+        key = _getch();
+        if (key == 224) { // Touche flèche (haut ou bas)
+            key = _getch();
+            if (key == 72 && selected_option > 0) { // Flèche haut
+                selected_option--;
+            } else if (key == 80 && selected_option < num_options - 1) { // Flèche bas
+                selected_option++;
+            }
+        } else if (key == 13) { // Touche Entrée
+            switch (selected_option) {
+                case 0:
+                    system("cls");
+                    gestionlignes();
+                    break;
+
+                case 1: {
+                    system("cls");
+                    char *username;
                     username = signUp();
-                    // Après l'inscription, on affiche un menu spécifique
-                    if(username!=NULL){
-                        menuPostConnexion(username);
-                    }
-
+                    ReserverVoyageHorsLine(username);
                     break;
-                case 2:
-                    username = login();
-                    if(username!=NULL){
-                        menuPostConnexion(username);
-                    }
+                }
 
+                case 2: {
+                    system("cls");
+                    ConsulterVoyages();
                     break;
+                }
+
                 case 3:
+                    system("cls");
+                    gotoXY(x_centre, y_centre + 8);
+                    SetColor(7);  // Couleur blanche pour le message de déconnexion
                     printf("Au revoir !\n");
-                    break;
+                    return; // Quitter la fonction directement
+
                 default:
-                    printf("Choix invalide. Veuillez réessayer.\n");
+                    system("cls");
+                    gotoXY(x_centre, y_centre + 8);
+                    SetColor(12);  // Rouge pour l'erreur de saisie
+                    printf("Choix invalide !\n");
+                    Sleep(1500);  // Pause de 1,5 secondes avant de réafficher le menu
+                    break;
             }
-            } while (choice != 3);
-            break;
         }
+    } while (1);
+}
 
-        case 2:{
-            // administrateur
-            printf("Bienvenue Administrateur!\n");
-            do {
-            printf("\nMenu:\n");
-            printf("1. Log In\n");
-            printf("2. Exit\n");
-            printf("Veuillez entrer votre choix: ");
-            scanf("%d", &choice);
 
-            switch (choice) {
-                case 1:
-                    loggedIn = loginAdmin();
-                    if (loggedIn) {
-                        MenuAdministrateur(); // Après la connexion réussie
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void MenuePrincipal() {
+    char *mainMenuOptions[] = {"User", "Admin", "Employe", "Exit", NULL};
+    char *userMenuOptions[] = {"Sign Up", "Log In", "Exit", NULL};
+    char *adminMenuOptions[] = {"Log In", "Exit", NULL};
+    char *employeMenuOptions[] = {"Log In", "Exit", NULL};
+
+    int choix;
+    int choice;
+    char *username;  // Indicateur de connexion réussie
+    int loggedIn;
+
+    int x_centre = 40;  // Largeur fixe
+    int y_centre = 5;   // Hauteur fixe, ajustable selon l'espace
+
+    do {
+        choix = choose_item(mainMenuOptions, "  Etes-vous", x_centre, y_centre);
+
+        switch (choix) {
+            case 0: { // User
+                system("cls");
+                do {
+                    choice = choose_item(userMenuOptions, "Menu Utilisateur", x_centre, y_centre);
+
+                    switch (choice) {
+                        case 0:
+                            username = signUp();
+                            if (username != NULL) {
+                                menuPostConnexion(username);
+                            }
+                            break;
+                        case 1:
+                            username = login();
+                            if (username != NULL) {
+                                menuPostConnexion(username);
+                            }
+                            break;
+                        case 2:
+                            system("cls");
+                            gotoXY(x_centre, y_centre + 8);
+                            printf("Au revoir !\n");
+                            break;
                     }
-                    break;
-                case 2:
-
-                    printf("Au revoir !\n");
-                    break;
-                default:
-                    printf("Choix invalide. Veuillez réessayer.\n");
+                } while (choice != 2);
+                break;
             }
-            } while (choice != 2);
 
-            break;
+            case 1: { // Admin
+                system("cls");
+                do {
+                    choice = choose_item(adminMenuOptions, "Menu Administrateur", x_centre, y_centre);
+
+                    switch (choice) {
+                        case 0:
+                            loggedIn = loginAdmin();
+                            if (loggedIn) {
+                                MenuAdministrateur();
+                            }
+                            break;
+                        case 1:
+                            system("cls");
+                            gotoXY(x_centre, y_centre + 8);
+                            printf("Au revoir !\n");
+                            break;
+                    }
+                } while (choice != 1);
+                break;
+            }
+
+            case 2: { // Employe
+                system("cls");
+                do {
+                    choice = choose_item(employeMenuOptions, "Menu Employé", x_centre, y_centre);
+
+                    switch (choice) {
+                        case 0:
+                            loggedIn = loginEmploye();
+                            if (loggedIn) {
+                                MenueEmploye();
+                            }
+                            break;
+                        case 1:
+                            system("cls");
+                            gotoXY(x_centre, y_centre + 8);
+                            printf("Au revoir !\n");
+                            break;
+                    }
+                } while (choice != 1);
+                break;
+            }
+
+            case 3: // Exit
+                system("cls");
+                gotoXY(x_centre, y_centre + 8);
+                printf("Au revoir !\n");
+                exit(0);
         }
-        case 3:
-            // quitter
-            printf("Au revoir !\n");
-            exit(0);
-
-    }
-} while (choix != 1 && choix != 2 && choix != 3);
-
-   
+    } while (choix != 3);
 }
 
 
