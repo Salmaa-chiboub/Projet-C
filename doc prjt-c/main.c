@@ -2435,7 +2435,9 @@ void supprimerCompagnie() {
     Compagnie compagnies[nb_compagnies];
     Contrat contrats[nb_compagnies];
     long i = 0;
-
+   // Allouer dynamiquement de la mémoire
+    Compagnie *compagnies = (Compagnie*)malloc(nb_compagnies * sizeof(Compagnie));
+    Contrat *contrats = (Contrat*)malloc(nb_compagnies * sizeof(Contrat));
     // Lecture des données dans des tableaux temporaires
     while (fread(&compagnie, sizeof(Compagnie), 1, fichier)) {
         fread(&contrat, sizeof(Contrat), 1, fichier);
@@ -2443,6 +2445,9 @@ void supprimerCompagnie() {
         contrats[i] = contrat;
         i++;
     }
+      // Libérer la mémoire allouée
+    free(compagnies);
+    free(contrats);
 
     fclose(fichier);
 
