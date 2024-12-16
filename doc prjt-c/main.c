@@ -134,7 +134,7 @@ typedef struct {
 void gotoXY(int x, int y) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     COORD position;
-    position.X = x + 20;
+    position.X = x + 23;
     position.Y = y;
     SetConsoleCursorPosition(hConsole, position);
 }
@@ -145,30 +145,36 @@ void SetColor(int color) {
 }
 
 // Fonction pour afficher un trait horizontal (trait "gras") au-dessus et en dessous du titre
-void drawBoldLine(int x_centre, int y_centre, int width, int color) {
-    gotoXY(x_centre - width+3, y_centre);
+void drawBoldLine(int x_centre, int y_centre, int color) {
+    int width = 50; // Longueur fixe du trait gras
+    gotoXY(x_centre - width / 2, y_centre);
     SetColor(color);
-    for (int i = 0; i < width; i++) printf("=====");
+    for (int i = 0; i < width; i++) printf("=");
     SetColor(7); // Retour à la couleur par défaut (blanc)
 }
 
 // Fonction pour afficher un titre avec des traits horizontaux au-dessus et en dessous
 void drawTitleWithBoldLine(int x_centre, int y_centre, const char *title, int color) {
-    int len = strlen(title);
-    int width = len + 4;  // Largeur du titre avec les espaces ajoutés
+    int width = 50; // Longueur fixe du trait gras
 
     // Dessiner le trait au-dessus du titre
-    drawBoldLine(x_centre-15, y_centre, width, color);
+    drawBoldLine(x_centre, y_centre, color);
 
     // Afficher le titre en jaune
-    gotoXY(x_centre - width / 2 + 1, y_centre + 1);
+    gotoXY(x_centre - strlen(title) / 2, y_centre + 1);
     SetColor(14);  // Jaune pour le titre
-    printf("  %s ", title);
+    printf("%s", title);
 
     // Dessiner le trait en dessous du titre
-    drawBoldLine(x_centre-15, y_centre + 2, width, color);
+    drawBoldLine(x_centre, y_centre + 2, color);
 
     SetColor(7);  // Retour à la couleur par défaut (blanc)
+}
+
+// Fonction pour centrer le message de pause
+void centerSystemPause(int x_centre, int y_centre) {
+    gotoXY(x_centre - 20, y_centre);
+    system("pause");
 }
 
 // Fonction de choix dans le menu
@@ -214,6 +220,9 @@ int choose_item(char **items, char *title, int x_centre, int y_centre) {
         }
     }
 }
+
+
+
 
 
 
@@ -823,147 +832,130 @@ void afficherReservationsExternes(const char* username) {
 }
 
 
-
-//Fonction pour afficher les lignes existantes
 void afficherLignes(char* username) {
-    int choix;
+    int selected_option = 0;
+    int key;
+    int x_centre = 40;  // Largeur fixe
+    int y_centre = 5;   // Hauteur fixe, ajustable selon l'espace
+    char *options[] = {"Lignes internes", "Lignes externes", "Retour"};
+    int num_options = 3;
 
     do {
-        printf("\n===========================\n");
-        printf("  AFFICHAGE DES LIGNES\n");
-        printf("===========================\n");
-        printf("1. Lignes internes\n");
-        printf("2. Lignes externes\n");
-        printf("3. Retour\n");
-        printf("Votre choix : ");
-        scanf("%d", &choix);
+        system("cls");
 
-        switch (choix) {
-            case 1: {
-                FILE *file = fopen(FILEvoyageInterne, "rb");
-                if (!file) {
-                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
-                } else {
-                    VoyageInterne voyage;
-                    int found = 0;
+        // Affichage du titre avec les traits "gras"
+        drawTitleWithBoldLine(x_centre, y_centre, "Affichage des Lignes", 14);
 
-                    printf("\n==============================================================================\n");
-                    printf("           LIGNES INTERNES DISPONIBLES\n");
-                    printf("==============================================================================\n");
-                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n",
-                        "ID", "Départ", "Arrivée", "Date", "Prix");
-                    printf("------------------------------------------------------------------------------\n");
-
-                    while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
-                        found = 1;
-                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD |\n",
-                            voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
-                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                            voyage.prix);
-                    }
-                     if (found) {
-                        int choixReservation;
-                        printf("\nSouhaitez-vous réserver un vol interne ? \n 1: Oui\n 2: Retour au menu principal \n ");
-                        scanf("%d", &choixReservation);
-
-                       switch (choixReservation) {
-
-                       case 1:
-                        ReserverVoyageInterne(username);
-                       break;
-
-                       case 2:
-                        printf("Retour au menu principal.\n");
-                        afficherLignes(username);
-                        return;
-
-                        default:
-                        printf("Choix invalide.\n");
-                     }
-
-                      break;
-                   }
-        
-
-                    if (!found) {
-                        printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
-                    }
-
-                    printf("==============================================================================\n");
-                    fclose(file);
-                }
-                break;
+        // Affichage des options du menu avec navigation par flèches
+        for (int i = 0; i < num_options; i++) {
+            gotoXY(x_centre - 10, y_centre + 3 + i * 2);
+            if (i == selected_option) {
+                SetColor(10);  // Couleur verte pour l'option sélectionnée
+                printf("> %s\n", options[i]);
+            } else {
+                SetColor(7);  // Couleur blanche par défaut
+                printf("  %s\n", options[i]);
             }
-    
-            case 2: {
-                FILE *file = fopen(FILEvoyageExterne, "rb");
-                if (!file) {
-                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
-                } else {
-                    VoyageExterne voyage;
-                    int found = 0;
-
-                      printf("\n=====================================================================================================================================\n");
-                      printf("                                  VOLS INTERNATIONAUX DISPONIBLES\n");
-                      printf("=====================================================================================================================================\n");
-                      printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s|\n",
-                             "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
-                            "Date", "Prix", "Classe");
-                      printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
-
-                    while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
-                        found = 1;
-                        printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n",
-                            voyage.id, voyage.pays_depart, voyage.pays_arrivee,
-                            voyage.aeroport_depart, voyage.aeroport_arrive,
-                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                            voyage.prix, voyage.classe);
-                    }
-
-                     if (found) {
-                        int choixReservation;
-                        printf("\nSouhaitez-vous réserver un vol externe ? \n 1: Oui\n 2: Retour au menu principal \n ");
-                        scanf("%d", &choixReservation);
-
-                       switch (choixReservation) {
-
-                       case 1:
-                        ReserverVoyageExterne(username);
-                       break;
-                       
-                       case 2:
-                        printf("Retour au menu principal.\n");
-                        afficherLignes(username);
-                        return;
-
-                        default:
-                        printf("Choix invalide.\n");
-                     }
-
-                      break;
-                   }
-
-                    if (!found) {
-                        printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
-                    }
-
-                      printf("=====================================================================================================================================\n");
-                    fclose(file);
-                }
-                break;
-            }
-            case 3:
-                printf("\nRetour au menu principal.\n");
-                break;
-            default:
-                printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
         }
-    } while (choix != 3);
+
+        // Obtenir l'entrée de l'utilisateur
+        key = _getch();
+        if (key == 224) {  // Touche flèche (haut ou bas)
+            key = _getch();
+            if (key == 72 && selected_option > 0) {  // Flèche haut
+                selected_option--;
+            } else if (key == 80 && selected_option < num_options - 1) {  // Flèche bas
+                selected_option++;
+            }
+        } else if (key == 13) {  // Touche Entrée
+            switch (selected_option) {
+                case 0: {
+                    system("cls");
+                    FILE *file = fopen(FILEvoyageInterne, "rb");
+                    if (!file) {
+                        SetColor(12);
+                        gotoXY(x_centre, y_centre + 2);
+                        printf("\u26a0\ufe0f Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
+                    } else {
+                        VoyageInterne voyage;
+                        int found = 0;
+                        drawTitleWithBoldLine(x_centre, y_centre, "Lignes Internes Disponibles", 14);
+                        
+                        gotoXY(x_centre - 50, y_centre + 4);
+                        printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n", "ID", "Départ", "Arrivée", "Date", "Prix");
+                        gotoXY(x_centre - 50, y_centre + 5);
+                        printf("------------------------------------------------------------------------------\n");
+
+                        while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
+                            found = 1;
+                            gotoXY(x_centre - 50, y_centre + 6 + found);
+                            printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD |\n", 
+                                voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive, 
+                                voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee, 
+                                voyage.prix);
+                        }
+
+                        if (!found) {
+                            SetColor(12);
+                            gotoXY(x_centre, y_centre + 2);
+                            printf("\u26a0\ufe0f Aucun vol interne disponible pour le moment.\n");
+                        }
+                        fclose(file);
+                    }
+                    break;
+                }
+                case 1: {
+                    system("cls");
+                    FILE *file = fopen(FILEvoyageExterne, "rb");
+                    if (!file) {
+                        SetColor(12);
+                        gotoXY(x_centre, y_centre + 2);
+                        printf("\u26a0\ufe0f Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
+                    } else {
+                        VoyageExterne voyage;
+                        int found = 0;
+                        drawTitleWithBoldLine(x_centre, y_centre, "Lignes Externes Disponibles", 14);
+                        
+                        gotoXY(x_centre - 60, y_centre + 4);
+                        printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s |\n", 
+                            "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée", "Date", "Prix", "Classe");
+                        gotoXY(x_centre - 60, y_centre + 5);
+                        printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+
+                        while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
+                            found = 1;
+                            gotoXY(x_centre - 60, y_centre + 6 + found);
+                            printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s |\n", 
+                                voyage.id, voyage.pays_depart, voyage.pays_arrivee, 
+                                voyage.aeroport_depart, voyage.aeroport_arrive, 
+                                voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee, 
+                                voyage.prix, voyage.classe);
+                        }
+
+                        if (!found) {
+                            SetColor(12);
+                            gotoXY(x_centre, y_centre + 2);
+                            printf("\u26a0\ufe0f Aucun vol externe disponible pour le moment.\n");
+                        }
+                        fclose(file);
+                    }
+                    break;
+                }
+                case 2:
+                    printf("\nRetour au menu principal.\n");
+                    return;
+
+                default:
+                    system("cls");
+                    gotoXY(x_centre, y_centre + 8);
+                    SetColor(12);  // Rouge pour l'erreur de saisie
+                    printf("Choix invalide !\n");
+                    Sleep(1500);  // Pause de 1,5 secondes avant de réafficher le menu
+                    break;
+            }
+        }
+    } while (1);
 }
-
-
-
-
 
 
 // un menu pour choisir après le login ou le sign up
@@ -1138,9 +1130,6 @@ void signUpAdmin() {
 }
 
 
-
-
-
 // Function to add an internal flight line
 void ajouterLigneInterne(FILE *file) {
     VoyageInterne voyage;
@@ -1236,22 +1225,52 @@ void ajouterLigneExterne(FILE *file) {
     printf("Ligne externe ajoutée avec succès.\n");
 }
 
+
 void AjouterLigne() {
+    int selected_option = 0;
+    int key;
+    int num_options = 3;
+    char *menuOptions[] = {"Ajouter une ligne interne", "Ajouter une ligne externe", "Quitter", NULL};
     int choix;
+    int x_centre = 40;  // Largeur fixe
+    int y_centre = 5;   // Hauteur fixe, ajustable selon l'espace
 
     do {
-        printf("\n1. Ajouter une ligne interne\n");
-        printf("2. Ajouter une ligne externe \n");
-        printf("3. Quitter\n");
-        printf("Entrez votre choix : ");
-        scanf("%d", &choix);
+        // Utilisation de la fonction choose_item pour afficher et choisir une option du menu
+        system("cls");
 
-        switch (choix) {
-            case 1: {
-                // Ouvre le fichier binaire en mode ajout ("ab")
+        // Affichage du titre avec les traits "gras"
+        drawTitleWithBoldLine(x_centre, y_centre, "Ajout des lignes", 14);
+
+        // Affichage des options du menu avec navigation par flèches
+        printf("\n");
+        for (int i = 0; i < num_options; i++) {
+            gotoXY(x_centre - 10, y_centre + 3 + i * 2);
+            if (i == selected_option) {
+                SetColor(10);  // Couleur verte pour l'option sélectionnée
+                printf("> %s\n", menuOptions[i]);
+            } else {
+                SetColor(7);  // Couleur blanche par défaut
+                printf("%s\n", menuOptions[i]);
+            }
+        }
+
+        // Obtenir l'entrée de l'utilisateur
+        key = _getch();
+        if (key == 224) {  // Touche flèche (haut ou bas)
+            key = _getch();
+            if (key == 72 && selected_option > 0) {  // Flèche haut
+                selected_option--;
+            } else if (key == 80 && selected_option < num_options - 1) {  // Flèche bas
+                selected_option++;
+            }
+        } else if (key == 13) {  // Touche Entrée
+            switch (selected_option) {
+            case 0: {  // Ajouter une ligne interne
                 FILE *file = fopen(FILEvoyageInterne, "ab+");
                 if (!file) {
-                    printf("Erreur lors de l'ouverture du fichier voyageInterne.bin\n");
+                    SetColor(12);  // Couleur rouge pour l'erreur
+                    printf("\n⚠️ Erreur lors de l'ouverture du fichier voyageInterne.bin\n");
                     return;
                 }
 
@@ -1260,15 +1279,11 @@ void AjouterLigne() {
                 break;
             }
 
-
-
-
-
-            case 2: {
+            case 1: {  // Ajouter une ligne externe
                 FILE *file = fopen(FILEvoyageExterne, "ab+");
-
                 if (!file) {
-                    printf("Erreur lors de l'ouverture du fichier voyageExterne.bin\n");
+                    SetColor(12);  // Couleur rouge pour l'erreur
+                    printf("\n⚠️ Erreur lors de l'ouverture du fichier voyageExterne.bin\n");
                     return;
                 }
 
@@ -1277,15 +1292,18 @@ void AjouterLigne() {
                 break;
             }
 
-            case 3:
-                printf("Retour au menu principal.\n");
-                break;
+            case 2: {  // Quitter
+                system("cls");
+                return;
+            }
 
             default:
-                printf("Choix invalide! Veuillez réessayer.\n");
+                SetColor(12);  // Couleur rouge pour un choix invalide
+                printf("⚠️ Choix invalide! Veuillez réessayer.\n");
                 break;
         }
-    } while (choix != 3);
+        }
+    } while (choix != 2);  // Continue jusqu'à ce que l'utilisateur choisisse de quitter
 }
 
 
@@ -1638,6 +1656,11 @@ void modifierVoyage(){
 }
 
 
+
+
+
+
+
 FILE* Ouvrir_Fichier(const char *nom_fichier, const char *mode) {
     FILE *fichier = fopen(nom_fichier, mode);
     if (fichier == NULL) {
@@ -1701,99 +1724,225 @@ void ConsulterVoyages(){
     }while(c!=3);
 
 }
-
-
 void afficherLignesAdmin() {
-    int choix;
+    int selected_option = 0;
+    int key;
+    int x_centre = 40;  // Largeur fixe
+    int y_centre = 5;   // Hauteur fixe, ajustable selon l'espace
+    char *options[] = {"Lignes internes", "Lignes externes", "Retour"};
+    int num_options = 3;
 
     do {
-        printf("\n===========================\n");
-        printf("  AFFICHAGE DES LIGNES\n");
-        printf("===========================\n");
-        printf("1. Lignes internes\n");
-        printf("2. Lignes externes\n");
-        printf("3. Retour\n");
-        printf("Votre choix : ");
-        scanf("%d", &choix);
+        system("cls");
 
-        switch (choix) {
-            case 1: {
-                FILE *file = fopen(FILEvoyageInterne, "rb");
-                if (!file) {
-                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
-                } else {
-                    VoyageInterne voyage;
-                    int found = 0;
+        // Affichage du titre avec les traits "gras"
+        drawTitleWithBoldLine(x_centre, y_centre, "Affichage des Lignes", 14);
 
-                    printf("\n==============================================================================\n");
-                    printf("           LIGNES INTERNES DISPONIBLES\n");
-                    printf("==============================================================================\n");
-                    printf("| %-10s | %-15s | %-15s | %-10s | %-8s MAD |\n",
-                        "ID", "Départ", "Arrivée", "Date", "Prix");
-                    printf("------------------------------------------------------------------------------\n");
-
-                    while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
-                        found = 1;
-                        printf("| %-10s | %-15s | %-15s | %02d/%02d/%04d | %-8d MAD |\n",
-                            voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive,
-                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                            voyage.prix);
-                    }
-
-                    if (!found) {
-                        printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
-                    }
-
-                    printf("==============================================================================\n");
-                    fclose(file);
-                }
-                break;
+        // Affichage des options du menu avec navigation par flèches
+        for (int i = 0; i < num_options; i++) {
+            gotoXY(x_centre - 10, y_centre + 3 + i * 2);
+            if (i == selected_option) {
+                SetColor(10);  // Couleur verte pour l'option sélectionnée
+                printf("> %s\n", options[i]);
+            } else {
+                SetColor(7);  // Couleur blanche par défaut
+                printf("%s\n", options[i]);
             }
-            case 2: {
-                FILE *file = fopen(FILEvoyageExterne, "rb");
-                if (!file) {
-                    printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
-                } else {
-                    VoyageExterne voyage;
-                    int found = 0;
-
-                      printf("\n=====================================================================================================================================\n");
-                      printf("                                  VOLS INTERNATIONAUX DISPONIBLES\n");
-                      printf("=====================================================================================================================================\n");
-                      printf("| %-10s | %-15s | %-15s | %-15s | %-15s | %-10s | %-10s MAD | %-10s|\n",
-                             "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée",
-                            "Date", "Prix", "Classe");
-                      printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
-
-                    while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
-                        found = 1;
-                        printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n",
-                            voyage.id, voyage.pays_depart, voyage.pays_arrivee,
-                            voyage.aeroport_depart, voyage.aeroport_arrive,
-                            voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
-                            voyage.prix, voyage.classe);
-                    }
-
-                    if (!found) {
-                        printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
-                    }
-
-                      printf("=====================================================================================================================================\n");
-                    fclose(file);
-                }
-                break;
-            }
-            case 3:
-                printf("\nRetour au menu principal.\n");
-                break;
-            default:
-                printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
         }
-    } while (choix != 3);
+
+        key = _getch();
+        if (key == 224) {  
+            key = _getch();
+            if (key == 72 && selected_option > 0) {  
+                selected_option--;
+            } else if (key == 80 && selected_option < num_options - 1) {  
+                selected_option++;
+            }
+        } else if (key == 13) {  
+            switch (selected_option) {
+         case 0: {  // Lignes internes
+                    system("cls");
+                    FILE *file = fopen(FILEvoyageInterne, "rb");
+                    if (!file) {
+                        SetColor(12);
+                        printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes internes.\n");
+                    } else {
+                        VoyageInterne voyage;
+                        int found = 0;
+
+                        drawTitleWithBoldLine(x_centre, y_centre, "LIGNES INTERNES DISPONIBLES", 14);
+                        gotoXY(x_centre - 50, y_centre + 4);
+                        
+                        // Affichage des en-têtes avec l'heure et la compagnie
+                        printf("| %-10s | %-20s  | %-20s  | %-10s | %-10s | %-15s | %-10s MAD|\n", 
+                               "ID", "Départ", "Arrivée", "Date", "Time", "Compagnie", "Prix");
+                        gotoXY(x_centre - 50, y_centre + 5);
+                        printf(" -----------------------------------------------------------------------------------------------------------------------\n");
+
+                        int line = 6;
+                        while (fread(&voyage, sizeof(VoyageInterne), 1, file) == 1) {
+                            found = 1;
+                            gotoXY(x_centre - 50, y_centre + line);
+                            printf("| %-10s | %-20s | %-20s | %02d/%02d/%04d | %02dh%02d-%02dh%02d | %-15s | %-10d    |\n", 
+                                   voyage.id, voyage.aeroport_depart, voyage.aeroport_arrive, 
+                                   voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee,
+                                   voyage.heure_depart.heure, voyage.heure_depart.minute,
+                                   voyage.heure_arrivee.heure, voyage.heure_arrivee.minute,
+                                   voyage.compagnie, voyage.prix);
+                            line++;
+                        }
+
+                        if (!found) {
+                            SetColor(12);
+                            gotoXY(x_centre - 20, y_centre + line + 2);
+                            printf("\n⚠️ Aucun vol interne disponible pour le moment.\n");
+                        }
+
+                        gotoXY(x_centre - 50, y_centre + line);
+                        printf(" =======================================================================================================================\n");
+                        fclose(file);
+                        centerSystemPause(x_centre, y_centre + line + 4);
+                    }
+                    break;
+                }
+
+              case 1: {
+                    system("cls");
+                    FILE *file = fopen(FILEvoyageExterne, "rb");
+                    if (!file) {
+                        SetColor(12);
+                        printf("\n⚠️ Erreur : Impossible d'ouvrir le fichier des lignes externes.\n");
+                    } else {
+                        VoyageExterne voyage;
+                        int found = 0;
+
+                        drawTitleWithBoldLine(x_centre, y_centre, "VOLS INTERNATIONAUX DISPONIBLES", 14);
+
+                        gotoXY(x_centre - 75, y_centre + 4);
+                        printf("\n\n| %-10s | %-15s  | %-15s  | %-15s   | %-15s   | %-10s | %-10s MAD| %-10s |\n", 
+                            "ID", "Pays Départ", "Pays Arrivée", "Aéroport Départ", "Aéroport Arrivée", 
+                            "Date", "Prix", "Classe");
+                        gotoXY(x_centre - 75, y_centre + 5);
+                        printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+
+                        int line = 6;
+                        while (fread(&voyage, sizeof(VoyageExterne), 1, file) == 1) {
+                            found = 1;
+                            gotoXY(x_centre - 75, y_centre + line);
+                            printf("| %-10s | %-15s | %-15s | %-17s | %-18s | %02d/%02d/%04d | %-10d MAD | %-10s|\n", 
+                                voyage.id, voyage.pays_depart, voyage.pays_arrivee, 
+                                voyage.aeroport_depart, voyage.aeroport_arrive, 
+                                voyage.date_voyage.jour, voyage.date_voyage.mois, voyage.date_voyage.annee, 
+                                voyage.prix, voyage.classe);
+                            line++;
+                        }
+
+                        if (!found) {
+                            SetColor(12);
+                            gotoXY(x_centre - 20, y_centre + line + 2);
+                            printf("\n⚠️ Aucun vol externe disponible pour le moment.\n");
+                        }
+
+                        gotoXY(x_centre - 75, y_centre + line + 2);
+                        printf("=====================================================================================================================================\n");
+                        fclose(file);
+                        centerSystemPause(x_centre, y_centre + line + 4);
+                    }
+                    break;
+                }
+    case 2:
+         SetColor(7);
+         printf("\nRetour au menu principal.\n");
+         return;
+    default:
+         SetColor(12);
+         printf("\n⚠️ Choix invalide. Veuillez réessayer.\n");
+            }
+        }
+    } while (selected_option != 2);
 }
 
 
 
+//menue de gestion des lignes;
+void gestionlignes() {
+    int selected_option = 0;
+    int key;
+    int x_centre = 40;  // Largeur fixe
+    int y_centre = 5;   // Hauteur fixe, ajustable selon l'espace
+    char *options[] = {"Afficher les lignes", "Ajouter une ligne", "Supprimer une ligne", "Modifier une ligne", "Quitter"};
+    int num_options = 5;
+
+    do {
+        system("cls");
+
+        // Affichage du titre avec les traits "gras"
+        drawTitleWithBoldLine(x_centre, y_centre, "Gestion des Lignes", 14);
+
+        // Affichage des options du menu avec navigation par flèches
+        for (int i = 0; i < num_options; i++) {
+            gotoXY(x_centre - 10, y_centre + 3 + i * 2);
+            if (i == selected_option) {
+                SetColor(10);  // Couleur verte pour l'option sélectionnée
+                printf("> %s\n", options[i]);
+            } else {
+                SetColor(7);  // Couleur blanche par défaut
+                printf("%s\n", options[i]);
+            }
+        }
+
+        // Obtenir l'entrée de l'utilisateur
+        key = _getch();
+        if (key == 224) {  // Touche flèche (haut ou bas)
+            key = _getch();
+            if (key == 72 && selected_option > 0) {  // Flèche haut
+                selected_option--;
+            } else if (key == 80 && selected_option < num_options - 1) {  // Flèche bas
+                selected_option++;
+            }
+        } else if (key == 13) {  // Touche Entrée
+            switch (selected_option) {
+                case 0:
+                    system("cls");
+                    afficherLignesAdmin();  // Afficher les lignes
+                    break;
+
+                case 1: {
+                    system("cls");
+                    AjouterLigne();  // Ajouter une ligne
+                    break;
+                }
+
+                case 2: {
+                    system("cls");
+                    supprimerLigne();  // Supprimer une ligne
+                    break;
+                }
+
+                case 3: {
+                    system("cls");
+                    modifierVoyage();  // Modifier une ligne
+                    break;
+                }
+
+                case 4:
+                    system("cls");
+                    gotoXY(x_centre, y_centre + 8);
+                    SetColor(7);  // Couleur blanche pour le message de fin
+                    printf("Retour au menu principal...\n");
+                    return;  // Quitter la fonction de gestion des lignes
+
+                default:
+                    system("cls");
+                    gotoXY(x_centre, y_centre + 8);
+                    SetColor(12);  // Rouge pour l'erreur de saisie
+                    printf("Choix invalide !\n");
+                    Sleep(1500);  // Pause de 1,5 secondes avant de réafficher le menu
+                    break;
+            }
+        }
+    } while (1);
+}
 
 
 
@@ -2947,45 +3096,6 @@ void GestionReservations() {
 
 
 
-void gestionlignes(){
-    int c;
-    do{
-        printf("1/ Affichier les lignes\n");
-        printf("2/ Ajout d'une ligne\n");
-        printf("3/ Supprimer d'une ligne\n");
-        printf("4/ Modifier une ligne \n");
-        printf("5/ Quitter \n");
-        scanf("%d",&c);
-        switch (c)
-        {
-        case 1:
-            afficherLignesAdmin();
-            break;
-        case 2:{
-            //ajouter une ligne;
-            AjouterLigne();
-            break;
-        }
-        case 3:{
-             //supprimer une ligne
-             supprimerLigne();
-            break;
-        }
-
-        case 4:
-           //modifier un voyage;
-             modifierVoyage();
-            break;
-        case 5:
-            break;
-        default:
-            printf("choix invalide !\n");
-            break;
-        }
-
-    }while (c!=5);
-    
-}
 //Menu d'administrateur
 void MenuAdministrateur(){
     int c;
@@ -3067,17 +3177,35 @@ int loginEmploye() {
     int y_centre = 5;
     drawTitleWithBoldLine(x_centre, y_centre, "Connexion Employé", 14);
 
+    // Cadre pour le champ identifiant
+    
+    gotoXY(x_centre - 22, y_centre + 3);
+    SetColor(14);
+    printf(" ------------------------------------------");
+    gotoXY(x_centre - 22, y_centre + 4);
+    printf("| Identifiant                              |");
+    gotoXY(x_centre - 22, y_centre + 5);
+    printf(" ------------------------------------------");
+
     // Demander l'identifiant
-    gotoXY(x_centre - 10, y_centre + 4);
-    SetColor(10);  // Vert pour le texte
-    printf("Identifiant: ");
-    SetColor(7);   // Retour à la couleur par défaut
+    gotoXY(x_centre - 7, y_centre + 4);
+    SetColor(7);
     scanf("%29s", identifiant);
 
+    // Limiter la saisie de l'utilisateur à 20 caractères
+    identifiant[20] = '\0';
+
+    // Cadre pour le champ mot de passe
+    SetColor(14);
+    gotoXY(x_centre - 22, y_centre + 6);
+    printf(" ------------------------------------------");
+    gotoXY(x_centre - 22, y_centre + 7);
+    printf("| Mot de passe                             |");
+    gotoXY(x_centre - 22, y_centre + 8);
+    printf(" ------------------------------------------");
+
     // Demander le mot de passe
-    gotoXY(x_centre - 10, y_centre + 6);
-    SetColor(10);
-    printf("Mot de passe: ");
+    gotoXY(x_centre - 7, y_centre + 7);
     SetColor(7);
     while (1) {
         char ch = _getch();  // Lire un caractère sans l'afficher
@@ -3087,7 +3215,7 @@ int loginEmploye() {
         } else if (ch == 8 && i > 0) {  // Si c'est la touche Backspace
             printf("\b \b");  // Effacer le dernier caractère affiché
             i--;
-        } else {
+        } else if (i < 20) {  // Limiter la saisie à 20 caractères
             mot_de_passe[i] = ch;  // Ajouter le caractère au mot de passe
             i++;
             printf("*");  // Afficher un astérisque pour masquer l'entrée
@@ -3098,10 +3226,10 @@ int loginEmploye() {
     // Ouvrir le fichier des employés en mode lecture binaire
     FILE *fichier = fopen("employe.bin", "rb");
     if (fichier == NULL) {
-        gotoXY(x_centre - 10, y_centre + 8);
+        gotoXY(x_centre - 20, y_centre + 10);
         SetColor(12);  // Rouge pour l'erreur
         printf("Erreur d'ouverture du fichier des employés.\n");
-        system("pause");
+        centerSystemPause(x_centre, y_centre + 11);
         SetColor(7);   // Retour à la couleur par défaut
         return 0;
     }
@@ -3112,24 +3240,23 @@ int loginEmploye() {
         // Vérifier si l'identifiant et le mot de passe correspondent
         if (strcmp(employe.identifiant, identifiant) == 0 && strcmp(employe.mot_de_passe, mot_de_passe) == 0) {
             fclose(fichier);
-            gotoXY(x_centre - 10, y_centre + 8);
+            gotoXY(x_centre - 20, y_centre + 10);
             SetColor(10);  // Vert pour la réussite
             printf("Connexion réussie.\n");
-            system("pause");
+            centerSystemPause(x_centre, y_centre + 11);
             SetColor(7);
             return 1;  // Connexion réussie
         }
     }
 
     fclose(fichier);
-    gotoXY(x_centre - 10, y_centre + 8);
+    gotoXY(x_centre - 20, y_centre + 10);
     SetColor(12);  // Rouge pour l'erreur
     printf("Identifiant ou mot de passe incorrect.\n");
-    system("pause");
+    centerSystemPause(x_centre, y_centre + 11);
     SetColor(7);   // Retour à la couleur par défaut
     return 0;  // Connexion échouée
 }
-
 
 void ReserverVoyageHorsLineInterne(char *username) {
     FILE *fichierVoyages = fopen("voyageInterne.bin", "rb");
@@ -3581,6 +3708,7 @@ void MenuePrincipal() {
 
 
 int main() {
+    system("chcp 850 > nul");
     SetConsoleOutputCP(CP_UTF8); // UTF-8 pour le support des accents
     MenuePrincipal();
     return 0;
