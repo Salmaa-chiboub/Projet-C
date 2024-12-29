@@ -1284,20 +1284,8 @@ char* signUp() {
 }
 
 
-<<<<<<< HEAD
-
-
-
-
-char * login() {
-    system("cls");
-    char mot_de_passe[30];
-    int i = 0;
-    static char username[USERNAME_LENGTH];  // Déclaration statique pour pouvoir le retourner
-=======
 char* login() {
     static char username[USERNAME_LENGTH];
->>>>>>> fee9f433f9bb6b1aa33e222dcc46195a9f762646
     User user;
     FILE *file = fopen(FILEuser, "rb");
 
@@ -1306,93 +1294,6 @@ char* login() {
         return NULL;
     }
 
-<<<<<<< HEAD
-    // Affichage stylisé du titre
-    int x_centre = 40;
-    int y_centre = 5;
-    drawTitleWithBoldLine(x_centre, y_centre, "Connexion User", 14);
-
-     // Cadre pour le champ username
-    
-    gotoXY(x_centre - 22, y_centre + 3);
-    SetColor(14);
-    printf(" ------------------------------------------");
-    gotoXY(x_centre - 22, y_centre + 4);
-    printf(" | Username                               |");
-    gotoXY(x_centre - 22, y_centre + 5);
-    printf(" ------------------------------------------");
-
-
-    // Demander l'identifiant
-    gotoXY(x_centre - 7, y_centre + 4);
-    SetColor(7);
-    scanf("%29s", username);
-
-    // Cadre pour le champ mot de passe
-    SetColor(14);
-    gotoXY(x_centre - 22, y_centre + 6);
-    printf(" ------------------------------------------");
-    gotoXY(x_centre - 22, y_centre + 7);
-    printf(" | Password                               |");
-    gotoXY(x_centre - 22, y_centre + 8);
-    printf(" ------------------------------------------");
-
-
-     // Demander le mot de passe
-    gotoXY(x_centre - 7, y_centre + 7);
-    SetColor(7);
-    while (1) {
-        char ch = _getch();  // Lire un caractère sans l'afficher
-        if (ch == 13) {  // Si l'utilisateur appuie sur Enter (13 en ASCII)
-            mot_de_passe[i] = '\0';  // Terminer la chaîne de caractères
-            break;
-        } else if (ch == 8 && i > 0) {  // Si c'est la touche Backspace
-            printf("\b \b");  // Effacer le dernier caractère affiché
-            i--;
-        } else if (i < 20) {  // Limiter la saisie à 20 caractères
-            mot_de_passe[i] = ch;  // Ajouter le caractère au mot de passe
-            i++;
-            printf("*");  // Afficher un astérisque pour masquer l'entrée
-        }
-    }
-    printf("\n");
-
-    // Ouvrir le fichier des users en mode lecture binaire
-    FILE *fichier = fopen("users.bin", "rb");
-    if (fichier == NULL) {
-        gotoXY(x_centre - 20, y_centre + 10);
-        SetColor(12);  // Rouge pour l'erreur
-        printf("Erreur d'ouverture du fichier des users.\n");
-        centerSystemPause(x_centre, y_centre + 11);
-        SetColor(7);   // Retour à la couleur par défaut
-        return NULL;
-    }
-
-
-
-
-    int trouve = 0;
-    while (fread(&user, sizeof(User), 1, fichier)) {
-        // Vérifier si l'identifiant et le mot de passe correspondent
-        if (strcmp(user.username, username) == 0 && strcmp(user.password, mot_de_passe) == 0) {
-            fclose(fichier);
-            gotoXY(x_centre - 20, y_centre + 10);
-            SetColor(10);  // Vert pour la réussite
-            printf("Connexion réussie.\n");
-            centerSystemPause(x_centre, y_centre + 11);
-            SetColor(7);
-            return username;  // Connexion réussie
-        }
-    }
-
-    fclose(fichier);
-    gotoXY(x_centre - 20, y_centre + 10);
-    SetColor(12);  // Rouge pour l'erreur
-    printf("Identifiant ou mot de passe incorrect.\n");
-    centerSystemPause(x_centre, y_centre + 11);
-    SetColor(7);   // Retour à la couleur par défaut
-    return 0;  // Connexion échouée
-=======
     // Configuration initiale
     system("cls");
 
@@ -1441,7 +1342,6 @@ char* login() {
     fclose(file);
     system("cls");
     return loginSuccess ? username : NULL;
->>>>>>> fee9f433f9bb6b1aa33e222dcc46195a9f762646
 }
 
 
@@ -1450,9 +1350,6 @@ char* login() {
 
 // Fonction pour afficher un billet de manière formatée
 
-<<<<<<< HEAD
-// faire une reservation;
-=======
 
 
 
@@ -1727,7 +1624,6 @@ void afficherBilletApresPaiement(const char *username) {
     fclose(fp_voyages);
 }
 
->>>>>>> fee9f433f9bb6b1aa33e222dcc46195a9f762646
 void saisirCriteresRecherche(char *depart, char *arrive, Date *date, int *nb_places) {
     const int FRAME_LEFT = 20;
     const int FRAME_RIGHT = 100;
@@ -6563,23 +6459,6 @@ void supprimerCompagnie() {
     // Animation de recherche
     drawWaitingAnimation(CENTER_X - 10, 20, "Recherche en cours");
 
-<<<<<<< HEAD
-    long nb_compagnies = taille_fichier / (sizeof(Compagnie) + sizeof(Contrat));
-    Compagnie compagnie;
-    Contrat contrat;
-    Compagnie compagnies[100];
-    Contrat contrats[100];
-    long i = 0;
-   // Allouer dynamiquement de la mémoire
-    Compagnie *compagnies = (Compagnie*)malloc(nb_compagnies * sizeof(Compagnie));
-    Contrat *contrats = (Contrat*)malloc(nb_compagnies * sizeof(Contrat));
-    // Lecture des données dans des tableaux temporaires
-    while (fread(&compagnie, sizeof(Compagnie), 1, fichier)) {
-        fread(&contrat, sizeof(Contrat), 1, fichier);
-        compagnies[i] = compagnie;
-        contrats[i] = contrat;
-        i++;
-=======
     // Lecture et stockage temporaire
     Compagnie *compagnies = NULL;
     int nbCompagnies = 0;
@@ -6589,7 +6468,6 @@ void supprimerCompagnie() {
         nbCompagnies++;
         compagnies = realloc(compagnies, nbCompagnies * sizeof(Compagnie));
         compagnies[nbCompagnies - 1] = temp;
->>>>>>> fee9f433f9bb6b1aa33e222dcc46195a9f762646
     }
     fclose(fichier);
 
@@ -8610,7 +8488,7 @@ void MenuePrincipal() {
 
 
 
-//seconde push
+
 
 int main() {
     system("cls");
