@@ -335,7 +335,10 @@ char* signUp() {
 
 
 
-char* login() {
+char * login() {
+    system("cls");
+    char mot_de_passe[30];
+    int i = 0;
     static char username[USERNAME_LENGTH];  // Déclaration statique pour pouvoir le retourner
     User user;
     FILE *file = fopen(FILEuser, "rb");
@@ -345,30 +348,92 @@ char* login() {
         return NULL;  // Retourner NULL si le fichier ne s'ouvre pas
     }
 
-    printf("Connexion:\n");
-    printf("Entrez votre nom d'utilisateur: ");
-    scanf("%s", user.username);  // Récupérer le nom d'utilisateur
+    // Affichage stylisé du titre
+    int x_centre = 40;
+    int y_centre = 5;
+    drawTitleWithBoldLine(x_centre, y_centre, "Connexion User", 14);
 
-    // Masquer la saisie du mot de passe
-    printf("Entrez votre mot de passe: ");
-    hide_input(user.password);  // Masquer la saisie du mot de passe
+     // Cadre pour le champ username
+    
+    gotoXY(x_centre - 22, y_centre + 3);
+    SetColor(14);
+    printf(" ------------------------------------------");
+    gotoXY(x_centre - 22, y_centre + 4);
+    printf(" | Username                               |");
+    gotoXY(x_centre - 22, y_centre + 5);
+    printf(" ------------------------------------------");
 
-    User tempUser;
-    while (fread(&tempUser, sizeof(User), 1, file)) {
-        // Comparer les informations d'utilisateur avec celles du fichier
-        if (strcmp(tempUser.username, user.username) == 0 && strcmp(tempUser.password, user.password) == 0) {
-            strcpy(username, tempUser.username);  // Copier le nom d'utilisateur
-            printf("\nConnexion réussie ! Bienvenue, %s %s.\n", tempUser.nom, tempUser.prenom);
-            fclose(file);  // Fermer le fichier
-            return username;  // Connexion réussie, retourner le nom d'utilisateur
+
+    // Demander l'identifiant
+    gotoXY(x_centre - 7, y_centre + 4);
+    SetColor(7);
+    scanf("%29s", username);
+
+    // Cadre pour le champ mot de passe
+    SetColor(14);
+    gotoXY(x_centre - 22, y_centre + 6);
+    printf(" ------------------------------------------");
+    gotoXY(x_centre - 22, y_centre + 7);
+    printf(" | Password                               |");
+    gotoXY(x_centre - 22, y_centre + 8);
+    printf(" ------------------------------------------");
+
+
+     // Demander le mot de passe
+    gotoXY(x_centre - 7, y_centre + 7);
+    SetColor(7);
+    while (1) {
+        char ch = _getch();  // Lire un caractère sans l'afficher
+        if (ch == 13) {  // Si l'utilisateur appuie sur Enter (13 en ASCII)
+            mot_de_passe[i] = '\0';  // Terminer la chaîne de caractères
+            break;
+        } else if (ch == 8 && i > 0) {  // Si c'est la touche Backspace
+            printf("\b \b");  // Effacer le dernier caractère affiché
+            i--;
+        } else if (i < 20) {  // Limiter la saisie à 20 caractères
+            mot_de_passe[i] = ch;  // Ajouter le caractère au mot de passe
+            i++;
+            printf("*");  // Afficher un astérisque pour masquer l'entrée
+        }
+    }
+    printf("\n");
+
+    // Ouvrir le fichier des users en mode lecture binaire
+    FILE *fichier = fopen("users.bin", "rb");
+    if (fichier == NULL) {
+        gotoXY(x_centre - 20, y_centre + 10);
+        SetColor(12);  // Rouge pour l'erreur
+        printf("Erreur d'ouverture du fichier des users.\n");
+        centerSystemPause(x_centre, y_centre + 11);
+        SetColor(7);   // Retour à la couleur par défaut
+        return NULL;
+    }
+
+
+
+
+    int trouve = 0;
+    while (fread(&user, sizeof(User), 1, fichier)) {
+        // Vérifier si l'identifiant et le mot de passe correspondent
+        if (strcmp(user.username, username) == 0 && strcmp(user.password, mot_de_passe) == 0) {
+            fclose(fichier);
+            gotoXY(x_centre - 20, y_centre + 10);
+            SetColor(10);  // Vert pour la réussite
+            printf("Connexion réussie.\n");
+            centerSystemPause(x_centre, y_centre + 11);
+            SetColor(7);
+            return username;  // Connexion réussie
         }
     }
 
-    printf("\nNom d'utilisateur ou mot de passe incorrect.\n");
-    fclose(file);  // Fermer le fichier si l'authentification échoue
-    return NULL;  // Connexion échouée
+    fclose(fichier);
+    gotoXY(x_centre - 20, y_centre + 10);
+    SetColor(12);  // Rouge pour l'erreur
+    printf("Identifiant ou mot de passe incorrect.\n");
+    centerSystemPause(x_centre, y_centre + 11);
+    SetColor(7);   // Retour à la couleur par défaut
+    return 0;  // Connexion échouée
 }
-
 
 
 
@@ -2672,8 +2737,8 @@ void supprimerCompagnie() {
     long nb_compagnies = taille_fichier / (sizeof(Compagnie) + sizeof(Contrat));
     Compagnie compagnie;
     Contrat contrat;
-    Compagnie compagnies[nb_compagnies];
-    Contrat contrats[nb_compagnies];
+    Compagnie compagnies[100];
+    Contrat contrats[100];
     long i = 0;
    // Allouer dynamiquement de la mémoire
     Compagnie *compagnies = (Compagnie*)malloc(nb_compagnies * sizeof(Compagnie));
